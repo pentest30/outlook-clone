@@ -1,0 +1,34 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Outlook.App.App"
+             RequestedThemeVariant="Default">
+  <Application.Styles>
+    <FluentTheme />
+    <StyleInclude Source="avares://OutlookClone/Styles/OutlookStyles.axaml" />
+  </Application.Styles>
+
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Light">
+          <SolidColorBrush x:Key="AccentBrush" Color="#0F6CBD" />
+          <SolidColorBrush x:Key="PaneBrush" Color="#F5F5F5" />
+          <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
+          <SolidColorBrush x:Key="DividerBrush" Color="#E0E0E0" />
+          <SolidColorBrush x:Key="SelectedBrush" Color="#CFE4FA" />
+          <SolidColorBrush x:Key="MutedTextBrush" Color="#616161" />
+          <SolidColorBrush x:Key="FlagBrush" Color="#C50F1F" />
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Dark">
+          <SolidColorBrush x:Key="AccentBrush" Color="#479EF5" />
+          <SolidColorBrush x:Key="PaneBrush" Color="#1F1F1F" />
+          <SolidColorBrush x:Key="SurfaceBrush" Color="#292929" />
+          <SolidColorBrush x:Key="DividerBrush" Color="#3D3D3D" />
+          <SolidColorBrush x:Key="SelectedBrush" Color="#0E3A63" />
+          <SolidColorBrush x:Key="MutedTextBrush" Color="#ADADAD" />
+          <SolidColorBrush x:Key="FlagBrush" Color="#F1707B" />
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+</Application>

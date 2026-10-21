@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\Outlook.Core\Outlook.Core.csproj" />
+    <ProjectReference Include="..\Outlook.Data\Outlook.Data.csproj" />
+    <PackageReference Include="MailKit" />
+    <InternalsVisibleTo Include="Outlook.Tests" />
+  </ItemGroup>
+</Project>
