@@ -34,6 +34,8 @@ public class MailMessage
     public bool IsForwarded { get; set; }
     public bool IsDraft { get; set; }
     public bool HasAttachments { get; set; }
+    /// <summary>Carries a meeting invitation, update or reply (a text/calendar part), known from the headers.</summary>
+    public bool HasCalendar { get; set; }
 
     /// <summary>Space-separated category keywords (see <see cref="Category.Keyword"/>).</summary>
     public string CategoryKeywords { get; set; } = "";
@@ -44,6 +46,8 @@ public class MailMessage
     public bool IsBodyDownloaded { get; set; }
     /// <summary>Plain text of the body (from the HTML when there is no text part), for the search index.</summary>
     public string? SearchText { get; set; }
+    /// <summary>The iCalendar text of that part, once the body is downloaded.</summary>
+    public string? CalendarIcs { get; set; }
 
     public List<MailAttachment> Attachments { get; set; } = [];
 

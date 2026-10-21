@@ -20,6 +20,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     private readonly IMailService _mail;
     private readonly IMailStore _store;
+    private readonly ICalendarService _calendar;
     private readonly AppSettings _settings;
     private readonly DispatcherTimer _syncTimer;
     private Account? _account;
@@ -31,15 +32,20 @@ public partial class MainWindowViewModel : ObservableObject
     private MailSearchQuery? _activeSearch;
     private Dictionary<string, Category> _categoriesByKeyword = [];
 
-    public MainWindowViewModel(IMailService mail, IMailStore store, ICredentialStore credentials, AppSettings settings)
+    public MainWindowViewModel(IMailService mail, IMailStore store, ICredentialStore credentials, AppSettings settings,
+        ICalendarService calendar)
     {
         _mail = mail;
         _store = store;
+        _calendar = calendar;
+        Calendar = new CalendarViewModel(calendar, () => _account);
+        Reminders = new RemindersViewModel(calendar, () => _account);
+        Reminders.OpenRequested += o => _ = Calendar.OpenAsync(o);
         _settings = settings;
         _showAsConversations = settings.ShowAsConversations;
         _searchAllFolders = settings.SearchAllFolders;
         AccountSetup = new AccountSetupViewModel(mail, store, credentials, OnAccountAddedAsync);
-        ReadingBody = new MessageBodyViewModel(mail, store);
+        ReadingBody = new MessageBodyViewModel(mail, store, InvitationForAsync);
         _syncTimer = new DispatcherTimer { Interval = SyncInterval };
         _syncTimer.Tick += (_, _) => SyncCommand.Execute(null);
         _mail.FolderChanged += (_, e) => Dispatcher.UIThread.Post(() => _ = OnServerFolderChangedAsync(e));
@@ -58,6 +64,38 @@ public partial class MainWindowViewModel : ObservableObject
     public ObservableCollection<ConversationCardViewModel> ConversationCards { get; } = [];
     public ObservableCollection<PendingSendViewModel> PendingSends { get; } = [];
     public IReadOnlyList<Category> Categories { get; private set; } = [];
+
+    public CalendarViewModel Calendar { get; }
+    public RemindersViewModel Reminders { get; }
+
+    /// <summary>Which module fills the window: Mail or Calendar (the navigation rail).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsMailActive))]
+    private bool _isCalendarActive;
+
+    public bool IsMailActive => !IsCalendarActive;
+
+    [RelayCommand]
+    private void ShowMail() => IsCalendarActive = false;
+
+    [RelayCommand]
+    private async Task ShowCalendarAsync()
+    {
+        IsCalendarActive = true;
+        await Calendar.ReloadAsync();
+    }
+
+    /// <summary>The meeting card for a message's calendar part, or null if it is not a usable invitation.</summary>
+    private async Task<InvitationViewModel?> InvitationForAsync(string ics)
+    {
+        if (_account is not { } account || _calendar.ParseInvitation(ics) is not { } invitation) return null;
+        var existing = await _calendar.FindAsync(account.Id, invitation.Uid);
+        return new InvitationViewModel(_calendar, account, invitation, existing, problem =>
+        {
+            if (problem is not null) StatusText = problem;
+            _ = Calendar.ReloadAsync();
+        });
+    }
 
     /// <summary>The single message shown in the reading pane (when not showing a conversation).</summary>
     public MessageBodyViewModel ReadingBody { get; }
@@ -126,6 +164,7 @@ public partial class MainWindowViewModel : ObservableObject
         NewMailCommand.NotifyCanExecuteChanged();
         await LoadCategoriesAsync();
         await ReloadFoldersAsync();   // show the cache immediately, then refresh from the server
+        Reminders.Start();
         _syncTimer.Start();
         await SyncAsync();
 
@@ -462,7 +501,7 @@ public partial class MainWindowViewModel : ObservableObject
             var folderNames = Folders.ToDictionary(f => f.Id, f => f.Name);
             foreach (var m in item.ThreadAll)
                 ConversationCards.Add(new ConversationCardViewModel(m,
-                    m.FolderId == SelectedFolder?.Id ? null : folderNames.GetValueOrDefault(m.FolderId), _mail, _store));
+                    m.FolderId == SelectedFolder?.Id ? null : folderNames.GetValueOrDefault(m.FolderId), _mail, _store, InvitationForAsync));
             var toOpen = ConversationCards.Where((c, i) => i == 0 || !c.Message.IsRead).ToList();
             foreach (var card in toOpen)
             {

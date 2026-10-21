@@ -62,6 +62,89 @@ namespace Outlook.Data.Migrations
                     b.ToTable("Accounts");
                 });
 
+            modelBuilder.Entity("Outlook.Core.Models.Appointment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("AccountId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Attendees")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("EndUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Ics")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsAllDay")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsOrganizer")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsRecurring")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("LastModifiedUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Location")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("MyResponse")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("OrganizerEmail")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OrganizerName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("ReminderMinutes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("RemindersDismissedThroughUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Sequence")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("SeriesEndUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ShowAs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("StartUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Uid")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId", "StartUtc");
+
+                    b.HasIndex("AccountId", "Uid")
+                        .IsUnique();
+
+                    b.ToTable("Appointments");
+                });
+
             modelBuilder.Entity("Outlook.Core.Models.Category", b =>
                 {
                     b.Property<int>("Id")
@@ -183,6 +266,9 @@ namespace Outlook.Data.Migrations
                     b.Property<string>("BodyText")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("CalendarIcs")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("CategoryKeywords")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -206,6 +292,9 @@ namespace Outlook.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("HasAttachments")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("HasCalendar")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("InReplyTo")
@@ -274,6 +363,15 @@ namespace Outlook.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("Messages");
+                });
+
+            modelBuilder.Entity("Outlook.Core.Models.Appointment", b =>
+                {
+                    b.HasOne("Outlook.Core.Models.Account", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Outlook.Core.Models.Category", b =>

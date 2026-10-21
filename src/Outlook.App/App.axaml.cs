@@ -4,6 +4,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Outlook.App.ViewModels;
+using Outlook.Calendar;
 using Outlook.App.Views;
 using Outlook.Core.Services;
 using Outlook.Data;
@@ -82,6 +83,7 @@ public partial class App : Application
             : new InMemoryCredentialStore());
         services.AddSingleton<ImapMailService>();
         services.AddSingleton<IMailService>(sp => sp.GetRequiredService<ImapMailService>());
+        services.AddSingleton<ICalendarService, CalendarService>();
         services.AddSingleton(_ => AppSettings.Load(Path.Combine(dataDir, "settings.json")));
         services.AddSingleton<MainWindowViewModel>();
 

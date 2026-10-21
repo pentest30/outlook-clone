@@ -202,9 +202,30 @@ public sealed class ImapMailService(Func<MailDbContext> createContext, ICredenti
             Size = s.Size ?? 0,
             Preview = (s.PreviewText ?? "").Trim(),
             HasAttachments = s.Attachments?.Any() ?? false,
+            HasCalendar = s.BodyParts?.Any(IsCalendarPart) ?? false,
         };
         ApplyFlags(message, s);
         return message;
+    }
+
+    private static bool IsCalendarPart(BodyPartBasic part) =>
+        part.ContentType.IsMimeType("text", "calendar") || part.ContentType.IsMimeType("application", "ics")
+        || (part.FileName?.EndsWith(".ics", StringComparison.OrdinalIgnoreCase) ?? false);
+
+    /// <summary>The invitation in a message: the text/calendar alternative, or an attached .ics.</summary>
+    internal static string? FindCalendar(MimeMessage mime)
+    {
+        foreach (var part in mime.BodyParts.OfType<MimePart>())
+        {
+            var isCalendar = part.ContentType.IsMimeType("text", "calendar") || part.ContentType.IsMimeType("application", "ics")
+                             || (part.FileName?.EndsWith(".ics", StringComparison.OrdinalIgnoreCase) ?? false);
+            if (!isCalendar) continue;
+            if (part is TextPart text) return text.Text;
+            using var stream = new MemoryStream();
+            part.Content?.DecodeTo(stream);
+            return System.Text.Encoding.UTF8.GetString(stream.ToArray());
+        }
+        return null;
     }
 
     private static void ApplyFlags(MailMessage m, IMessageSummary s)
@@ -327,6 +348,8 @@ public sealed class ImapMailService(Func<MailDbContext> createContext, ICredenti
         cached.BodyText = mime.TextBody;
         cached.BodyHtml = mime.HtmlBody;
         cached.SearchText = mime.TextBody ?? (mime.HtmlBody is { } html ? HtmlText.ToPlainText(html) : null);
+        cached.CalendarIcs = FindCalendar(mime);
+        cached.HasCalendar = cached.CalendarIcs is not null;
 
         await db.Attachments.Where(a => a.MessageId == cached.Id).ExecuteDeleteAsync(ct);
         var attachments = ExtractAttachments(mime);
@@ -715,8 +738,36 @@ public sealed class ImapMailService(Func<MailDbContext> createContext, ICredenti
         var body = new BodyBuilder { TextBody = outgoing.BodyText, HtmlBody = outgoing.BodyHtml };
         foreach (var a in outgoing.Attachments ?? [])
             body.Attachments.Add(a.FileName, a.Data, ContentType.Parse(a.ContentType));
-        mime.Body = body.ToMessageBody();
+        mime.Body = outgoing.Calendar is { } calendar ? WithCalendar(body.ToMessageBody(), calendar) : body.ToMessageBody();
         return mime;
+    }
+
+    /// <summary>
+    /// iMIP layout that Outlook, Gmail and Apple Mail all recognise: the readable text and a
+    /// text/calendar part with the iTIP method, side by side in multipart/alternative.
+    /// </summary>
+    private static MimeEntity WithCalendar(MimeEntity body, OutgoingCalendar calendar)
+    {
+        var part = new TextPart("calendar") { Text = calendar.Ics };
+        part.ContentType.Charset = "utf-8";
+        part.ContentType.Parameters.Add("method", calendar.Method);
+        part.ContentTransferEncoding = ContentEncoding.QuotedPrintable;
+
+        if (body is Multipart { ContentType.MediaSubtype: "mixed" } mixed)
+        {
+            // With attachments: put the calendar next to the text inside the first (body) part.
+            var alternative = new MultipartAlternative { mixed[0], part };
+            mixed.RemoveAt(0);
+            mixed.Insert(0, alternative);
+            return mixed;
+        }
+        return body is MultipartAlternative alt ? Append(alt, part) : new MultipartAlternative { body, part };
+    }
+
+    private static MultipartAlternative Append(MultipartAlternative alternative, MimeEntity part)
+    {
+        alternative.Add(part);
+        return alternative;
     }
 
     /// <summary>Drafts keep whatever was typed; sending rejects anything that is not a valid address.</summary>

@@ -24,7 +24,7 @@ public class MailStore(Func<MailDbContext> createContext) : IMailStore
         Date = m.Date, Size = m.Size, Preview = m.Preview,
         IsRead = m.IsRead, IsFlagged = m.IsFlagged, IsAnswered = m.IsAnswered, IsForwarded = m.IsForwarded,
         IsDraft = m.IsDraft, HasAttachments = m.HasAttachments, IsBodyDownloaded = m.IsBodyDownloaded,
-        CategoryKeywords = m.CategoryKeywords,
+        CategoryKeywords = m.CategoryKeywords, HasCalendar = m.HasCalendar,
     };
 
     /// <summary>Creates the cache or upgrades it to the current schema (EF Core migrations).</summary>

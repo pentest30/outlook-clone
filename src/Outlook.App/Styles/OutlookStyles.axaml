@@ -10,6 +10,11 @@
     <Setter Property="CornerRadius" Value="4" />
   </Style>
 
+  <Style Selector="Button.command.active">
+    <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
   <Style Selector="Button.primary">
     <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
     <Setter Property="Foreground" Value="White" />

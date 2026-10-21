@@ -22,12 +22,36 @@
     <KeyBinding Gesture="Ctrl+Q" Command="{Binding MarkReadCommand}" />
     <KeyBinding Gesture="Ctrl+U" Command="{Binding MarkUnreadCommand}" />
     <KeyBinding Gesture="Insert" Command="{Binding ToggleFlagCommand}" />
+    <KeyBinding Gesture="Ctrl+1" Command="{Binding ShowMailCommand}" />
+    <KeyBinding Gesture="Ctrl+2" Command="{Binding ShowCalendarCommand}" />
   </Window.KeyBindings>
 
   <Window.Resources>
     <!-- Attachment chips and the remote-pictures banner, shared by the single view and conversation cards. -->
     <DataTemplate x:Key="BodyExtras" x:DataType="vm:MessageBodyViewModel">
       <StackPanel Spacing="8">
+        <!-- Meeting card: invitation, update, cancellation or reply -->
+        <Border IsVisible="{Binding HasInvitation}" Background="{DynamicResource PaneBrush}" BorderBrush="{DynamicResource AccentBrush}"
+                BorderThickness="3,0,0,0" CornerRadius="4" Padding="14,10">
+          <StackPanel Spacing="4" DataContext="{Binding Invitation}" x:DataType="vm:InvitationViewModel">
+            <TextBlock Text="{Binding Heading}" FontSize="12" Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding When, StringFormat='🕑  {0}'}" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding Where, StringFormat='📍  {0}'}" IsVisible="{Binding HasWhere}" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding Repeats, StringFormat='↻  {0}'}" IsVisible="{Binding HasRepeats}" />
+            <TextBlock Text="{Binding Organizer, StringFormat='Organizer: {0}'}" FontSize="12" Classes="muted" />
+            <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,6,0,0" IsVisible="{Binding IsRequest}">
+              <Button Classes="primary" Content="✓  Accept" Command="{Binding AcceptCommand}" />
+              <Button Content="?  Tentative" Command="{Binding TentativeCommand}" />
+              <Button Content="✕  Decline" Command="{Binding DeclineCommand}" />
+              <CheckBox Content="Send response to organizer" IsChecked="{Binding SendResponse}" Margin="8,0,0,0" />
+            </StackPanel>
+            <Button Content="Remove from calendar" Command="{Binding RemoveCommand}" IsVisible="{Binding IsCancel}"
+                    HorizontalAlignment="Left" Margin="0,6,0,0" />
+            <TextBlock Text="{Binding Status}" FontSize="12" Classes="muted" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
         <ItemsControl ItemsSource="{Binding Attachments}" IsVisible="{Binding HasAttachments}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
@@ -71,7 +95,7 @@
       <Border DockPanel.Dock="Top" Background="{DynamicResource AccentBrush}" Height="44">
         <Grid ColumnDefinitions="220,*,220" Margin="12,0">
           <TextBlock Text="Outlook" Foreground="White" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
-          <Grid Grid.Column="1" ColumnDefinitions="*,Auto,Auto" MaxWidth="640" VerticalAlignment="Center">
+          <Grid Grid.Column="1" ColumnDefinitions="*,Auto,Auto" MaxWidth="640" VerticalAlignment="Center" IsVisible="{Binding IsMailActive}">
             <TextBox x:Name="SearchBox" Text="{Binding SearchText}" Height="30"
                      Watermark="Search (Ctrl+E)   from:  subject:  has:attachment  is:unread  category:">
               <TextBox.KeyBindings>
@@ -92,7 +116,23 @@
       <!-- Command bar -->
       <Border DockPanel.Dock="Top" Background="{DynamicResource PaneBrush}"
               BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1" Padding="8,6">
-        <StackPanel Orientation="Horizontal" Spacing="2">
+        <Panel>
+        <!-- Calendar commands -->
+        <Panel IsVisible="{Binding IsCalendarActive}">
+        <StackPanel Orientation="Horizontal" Spacing="2" DataContext="{Binding Calendar}" x:DataType="vm:CalendarViewModel">
+          <Button Classes="primary" Content="📅  New appointment" Command="{Binding NewAppointmentCommand}" />
+          <Rectangle Width="1" Fill="{DynamicResource DividerBrush}" Margin="8,4" />
+          <Button Classes="command" Classes.active="{Binding IsDayMode}" Content="Day" Command="{Binding SetDayCommand}" />
+          <Button Classes="command" Classes.active="{Binding IsWorkWeekMode}" Content="Work week" Command="{Binding SetWorkWeekCommand}" />
+          <Button Classes="command" Classes.active="{Binding IsWeekMode}" Content="Week" Command="{Binding SetWeekCommand}" />
+          <Button Classes="command" Classes.active="{Binding IsMonthMode}" Content="Month" Command="{Binding SetMonthCommand}" />
+          <Rectangle Width="1" Fill="{DynamicResource DividerBrush}" Margin="8,4" />
+          <Button Classes="command" Content="✎  Open" Command="{Binding OpenSelectedCommand}" ToolTip.Tip="Enter" />
+          <Button Classes="command" Content="🗑  Delete" Command="{Binding DeleteSelectedCommand}" ToolTip.Tip="Delete" />
+        </StackPanel>
+        </Panel>
+
+        <StackPanel Orientation="Horizontal" Spacing="2" IsVisible="{Binding IsMailActive}">
           <Button Classes="primary" Content="✉  New mail" Command="{Binding NewMailCommand}" ToolTip.Tip="Ctrl+N" />
           <Rectangle Width="1" Fill="{DynamicResource DividerBrush}" Margin="8,4" />
           <Button Classes="command" Content="🗑  Delete" Command="{Binding DeleteCommand}" ToolTip.Tip="Delete" />
@@ -113,6 +153,7 @@
                         BorderThickness="0" Padding="10,6" CornerRadius="4" ToolTip.Tip="Show as conversations" />
           <Button Classes="command" Content="⟳  Send / Receive" Command="{Binding SyncCommand}" ToolTip.Tip="F9" />
         </StackPanel>
+        </Panel>
       </Border>
 
       <!-- Status bar -->
@@ -146,15 +187,17 @@
         <!-- Navigation rail -->
         <Border Background="{DynamicResource PaneBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,1,0">
           <StackPanel Margin="0,8">
-            <Button Classes="rail active" Content="✉" ToolTip.Tip="Mail" />
-            <Button Classes="rail" Content="📅" ToolTip.Tip="Calendar (Phase 4)" IsEnabled="False" />
+            <Button Classes="rail" Classes.active="{Binding IsMailActive}" Content="✉" ToolTip.Tip="Mail (Ctrl+1)"
+                    Command="{Binding ShowMailCommand}" />
+            <Button Classes="rail" Classes.active="{Binding IsCalendarActive}" Content="📅" ToolTip.Tip="Calendar (Ctrl+2)"
+                    Command="{Binding ShowCalendarCommand}" />
             <Button Classes="rail" Content="👥" ToolTip.Tip="People (Phase 5)" IsEnabled="False" />
             <Button Classes="rail" Content="☑" ToolTip.Tip="To Do (Phase 5)" IsEnabled="False" />
           </StackPanel>
         </Border>
 
         <!-- Folder pane (also a drop target for dragged messages) -->
-        <DockPanel Grid.Column="1" Background="{DynamicResource PaneBrush}">
+        <DockPanel Grid.Column="1" Background="{DynamicResource PaneBrush}" IsVisible="{Binding IsMailActive}">
           <TextBlock DockPanel.Dock="Top" Text="{Binding AccountEmail}" Margin="14,12,8,6"
                      FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
           <ListBox x:Name="FolderList" Classes="pane" ItemsSource="{Binding Folders}" SelectedItem="{Binding SelectedFolder}"
@@ -173,10 +216,10 @@
           </ListBox>
         </DockPanel>
 
-        <GridSplitter Grid.Column="2" Width="1" Background="{DynamicResource DividerBrush}" ResizeDirection="Columns" />
+        <GridSplitter Grid.Column="2" Width="1" Background="{DynamicResource DividerBrush}" ResizeDirection="Columns" IsVisible="{Binding IsMailActive}" />
 
         <!-- Message list -->
-        <DockPanel Grid.Column="3">
+        <DockPanel Grid.Column="3" IsVisible="{Binding IsMailActive}">
           <TextBlock DockPanel.Dock="Top" Classes="paneTitle" Text="{Binding FolderTitle}" Margin="16,12,8,8" />
           <TextBlock DockPanel.Dock="Top" Text="Double-click a draft to keep editing it." FontSize="12" Classes="muted"
                      Margin="16,0,8,6" IsVisible="{Binding IsDraftsFolder}" />
@@ -201,6 +244,7 @@
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
                           <TextBlock Text="↩" IsVisible="{Binding IsAnswered}" FontSize="12" Classes="muted" ToolTip.Tip="Replied" />
                           <TextBlock Text="↪" IsVisible="{Binding IsForwarded}" FontSize="12" Classes="muted" ToolTip.Tip="Forwarded" />
+                          <TextBlock Text="📅" IsVisible="{Binding HasCalendar}" FontSize="11" ToolTip.Tip="Meeting invitation or reply" />
                           <TextBlock Text="📎" IsVisible="{Binding HasAttachments}" FontSize="11" />
                           <TextBlock Text="⚑" IsVisible="{Binding IsFlagged}" Foreground="{DynamicResource FlagBrush}" />
                         </StackPanel>
@@ -239,10 +283,15 @@
           </ListBox>
         </DockPanel>
 
-        <GridSplitter Grid.Column="4" Width="1" Background="{DynamicResource DividerBrush}" ResizeDirection="Columns" />
+        <GridSplitter Grid.Column="4" Width="1" Background="{DynamicResource DividerBrush}" ResizeDirection="Columns" IsVisible="{Binding IsMailActive}" />
+
+        <!-- Calendar module, in place of the mail panes -->
+        <Panel Grid.Column="1" Grid.ColumnSpan="5" IsVisible="{Binding IsCalendarActive}">
+          <views:CalendarView DataContext="{Binding Calendar}" />
+        </Panel>
 
         <!-- Reading pane -->
-        <Panel Grid.Column="5">
+        <Panel Grid.Column="5" IsVisible="{Binding IsMailActive}">
           <TextBlock Text="Select an item to read" Classes="muted" FontSize="15"
                      HorizontalAlignment="Center" VerticalAlignment="Center"
                      IsVisible="{Binding !HasSelection}" />

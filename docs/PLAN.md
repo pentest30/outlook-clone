@@ -102,12 +102,29 @@ Deferred from Phase 1:
 - CONDSTORE/QRESYNC deltas, retry/backoff, offline outbox queue
 - Notifications (toasts), system tray
 
-### Phase 4 — Calendar
-- Day / work-week / week / month views, drag to create, move and resize events
-- Recurrence (RRULE), time zones
-- Meeting invites: parse `text/calendar` in mail, Accept / Tentative / Decline replies (iTIP)
-- CalDAV sync for real calendars (Graph API later for M365)
-- Reminders
+### Phase 4a — Calendar (done)
+- Local calendar, like classic Outlook for IMAP/POP accounts (OVH MX Plan has no CalDAV). Each
+  appointment is stored as its iCalendar text (lossless: rules, exceptions, attendees) plus columns
+  for fast range queries. Ical.Net expands repeating series; parsed series are cached per version.
+- Views: Day, Work week, Week, Month; mini month navigator; now line; overlapping items side by
+  side; all-day strip; double-click an empty slot to create, double-click an item to open
+- Editor: title, attendees, start/end (keeps the duration when the start moves), all day, repeat
+  (daily, weekdays, weekly, monthly, yearly, until a date), location, show as, reminder, notes
+- Repeating items: delete this occurrence (EXDATE) or the series; edits keep deleted occurrences
+- Meetings over e-mail (iTIP/iMIP, works with any mail server): adding attendees sends a REQUEST
+  (text/calendar alternative part, Outlook/Gmail/Apple compatible); updates bump SEQUENCE;
+  deleting sends CANCEL. Received invitations show a card with Accept / Tentative / Decline
+  (optional response to the organizer, REPLY); declined meetings leave the calendar;
+  cancellations offer "Remove from calendar"; replies are recorded on my meeting when opened
+- Reminders window (checks every 30 s): Dismiss, Snooze 5 min, Open
+- Ctrl+1 Mail, Ctrl+2 Calendar; Delete / Enter on the selected item; Ctrl+Left/Right to move
+
+### Phase 4b — still to do
+- Drag to move and resize appointments; edit a single occurrence of a series (RECURRENCE-ID)
+- CalDAV sync (and Microsoft Graph for Microsoft 365) for servers that have a calendar
+- Free/busy and the scheduling assistant; room booking
+- Time zone picker per appointment; showing a second time zone
+- Desktop notifications for reminders when the window is minimised
 
 ### Phase 5 — People & To Do
 - Contacts (CardDAV), address autocomplete from history

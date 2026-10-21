@@ -64,6 +64,7 @@ public partial class MessageItemViewModel : ObservableObject
     public string Subject => string.IsNullOrWhiteSpace(Model.Subject) ? "(no subject)" : Model.Subject;
     public string Preview => Model.Preview;
     public bool HasAttachments => ThreadInFolder.Any(m => m.HasAttachments);
+    public bool HasCalendar => ThreadInFolder.Any(m => m.HasCalendar);
     public bool IsAnswered => Model.IsAnswered;
     public bool IsForwarded => Model.IsForwarded;
     public string To => Model.To;

@@ -11,7 +11,8 @@ namespace Outlook.App.ViewModels;
 /// The rendered body of one message: HTML, attachments, inline pictures and the remote-picture
 /// block. Shared by the single-message reading pane and each card of a conversation.
 /// </summary>
-public partial class MessageBodyViewModel(IMailService mail, IMailStore store) : ObservableObject
+public partial class MessageBodyViewModel(IMailService mail, IMailStore store,
+    Func<string, Task<InvitationViewModel?>>? invitationFor = null) : ObservableObject
 {
     public ObservableCollection<AttachmentViewModel> Attachments { get; } = [];
 
@@ -24,6 +25,13 @@ public partial class MessageBodyViewModel(IMailService mail, IMailStore store) :
     [ObservableProperty] private bool _allowRemoteContent;
     [ObservableProperty] private bool _hasAttachments;
     [ObservableProperty] private Func<string, byte[]?>? _inlineImageResolver;
+
+    /// <summary>The meeting card, when the message carries an invitation, update, cancellation or reply.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasInvitation))]
+    private InvitationViewModel? _invitation;
+
+    public bool HasInvitation => Invitation is not null;
 
     /// <summary>Downloads the body if needed and renders it. Returns false if the message is gone.</summary>
     public async Task<bool> LoadAsync(MailMessage message)
@@ -51,6 +59,10 @@ public partial class MessageBodyViewModel(IMailService mail, IMailStore store) :
             HasBlockedContent = prepared.HasRemoteContent;
             Html = prepared.Html;
             Full = full;
+
+            Invitation = full.CalendarIcs is { } ics && invitationFor is not null ? await invitationFor(ics) : null;
+            if (Invitation is not null)
+                await Invitation.AutoApplyAsync();
             return true;
         }
         catch (Exception ex)
@@ -73,6 +85,7 @@ public partial class MessageBodyViewModel(IMailService mail, IMailStore store) :
         HasBlockedContent = false;
         AllowRemoteContent = false;
         InlineImageResolver = null;
+        Invitation = null;
     }
 
     [RelayCommand]

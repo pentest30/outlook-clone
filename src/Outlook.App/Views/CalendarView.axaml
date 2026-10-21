@@ -1,0 +1,227 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Outlook.App.ViewModels"
+             xmlns:controls="using:Outlook.App.Controls"
+             x:Class="Outlook.App.Views.CalendarView"
+             x:DataType="vm:CalendarViewModel" Focusable="True">
+
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="Delete" Command="{Binding DeleteSelectedCommand}" />
+    <KeyBinding Gesture="Enter" Command="{Binding OpenSelectedCommand}" />
+    <KeyBinding Gesture="Ctrl+Left" Command="{Binding PreviousCommand}" />
+    <KeyBinding Gesture="Ctrl+Right" Command="{Binding NextCommand}" />
+  </UserControl.KeyBindings>
+
+  <DockPanel>
+    <!-- Left pane: month navigator, as in Outlook -->
+    <Border DockPanel.Dock="Left" Width="260" Background="{DynamicResource PaneBrush}"
+            BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,1,0">
+      <StackPanel Margin="8,8">
+        <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+          <Calendar SelectedDate="{Binding PickerDate}" DisplayDate="{Binding SelectedDate}" />
+        </Viewbox>
+        <TextBlock Text="My calendar" FontWeight="SemiBold" Margin="8,16,8,4" />
+        <StackPanel Orientation="Horizontal" Spacing="8" Margin="8,0">
+          <Border Width="12" Height="12" CornerRadius="2" Background="#0F6CBD" VerticalAlignment="Center" />
+          <TextBlock Text="Appointments" FontSize="12" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="8" Margin="8,4">
+          <Border Width="12" Height="12" CornerRadius="2" Background="#8764B8" VerticalAlignment="Center" />
+          <TextBlock Text="Meetings" FontSize="12" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="8" Margin="8,0">
+          <Border Width="12" Height="12" CornerRadius="2" Background="Gray" VerticalAlignment="Center" />
+          <TextBlock Text="Tentative / not answered" FontSize="12" />
+        </StackPanel>
+        <TextBlock Text="{Binding Status}" FontSize="12" Classes="muted" TextWrapping="Wrap" Margin="8,16,8,0" />
+      </StackPanel>
+    </Border>
+
+    <!-- Date navigation -->
+    <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1" Padding="12,8">
+      <StackPanel Orientation="Horizontal" Spacing="4">
+        <Button Classes="command" Content="Today" Command="{Binding TodayCommand}" />
+        <Button Classes="command" Content="‹" Command="{Binding PreviousCommand}" ToolTip.Tip="Previous (Ctrl+Left)" FontSize="16" Padding="10,2" />
+        <Button Classes="command" Content="›" Command="{Binding NextCommand}" ToolTip.Tip="Next (Ctrl+Right)" FontSize="16" Padding="10,2" />
+        <TextBlock Text="{Binding Title}" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" Margin="12,0,0,0" />
+      </StackPanel>
+    </Border>
+
+    <Panel>
+      <!-- Month view: six weeks, a few items per day, "+N more" opens the day -->
+      <Grid RowDefinitions="Auto,*" IsVisible="{Binding IsMonthView}">
+        <ItemsControl ItemsSource="{Binding WeekdayNames}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <UniformGrid Columns="7" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="x:String">
+              <TextBlock Text="{Binding}" FontSize="12" Classes="muted" Margin="8,6" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <ItemsControl Grid.Row="1" ItemsSource="{Binding MonthCells}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <UniformGrid Columns="7" Rows="6" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:MonthCellViewModel">
+              <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,1,1,0" Background="Transparent"
+                      DoubleTapped="OnMonthCellDoubleTapped" Classes.outside="{Binding !InMonth}" ClipToBounds="True">
+                <StackPanel Margin="6,4" Spacing="2">
+                  <Border HorizontalAlignment="Left" CornerRadius="10" Padding="6,0"
+                          Background="{DynamicResource AccentBrush}" IsVisible="{Binding IsToday}">
+                    <TextBlock Text="{Binding DayNumber}" Foreground="White" FontWeight="SemiBold" />
+                  </Border>
+                  <TextBlock Text="{Binding DayNumber}" IsVisible="{Binding !IsToday}" FontWeight="SemiBold" />
+                  <ItemsControl ItemsSource="{Binding Items}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:EventChipViewModel">
+                        <Border Background="Transparent" Padding="2,1" CornerRadius="3"
+                                PointerPressed="OnChipPressed" DoubleTapped="OnChipDoubleTapped">
+                          <StackPanel Orientation="Horizontal" Spacing="4">
+                            <Border Width="3" Background="{Binding Accent}" />
+                            <TextBlock Text="{Binding Text}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                          </StackPanel>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <TextBlock Text="{Binding MoreText}" IsVisible="{Binding HasMore}" FontSize="11"
+                             Foreground="{DynamicResource AccentBrush}" />
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </Grid>
+
+      <!-- Day / work week / week: all-day strip, then the scrolling time grid -->
+      <Grid RowDefinitions="Auto,Auto,*" ColumnDefinitions="60,*" IsVisible="{Binding IsTimeGridView}">
+        <ItemsControl Grid.Column="1" ItemsSource="{Binding Days}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <UniformGrid Rows="1" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:CalendarDayViewModel">
+              <StackPanel Orientation="Horizontal" Spacing="6" Margin="8,6">
+                <TextBlock Text="{Binding DayName}" Classes="muted" VerticalAlignment="Center" />
+                <Border CornerRadius="12" Padding="7,1" Background="{DynamicResource AccentBrush}" IsVisible="{Binding IsToday}">
+                  <TextBlock Text="{Binding DayNumber}" Foreground="White" FontSize="16" FontWeight="SemiBold" />
+                </Border>
+                <TextBlock Text="{Binding DayNumber}" FontSize="16" FontWeight="SemiBold" IsVisible="{Binding !IsToday}" />
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <TextBlock Grid.Row="1" Text="All day" FontSize="11" Classes="muted" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,6,0" />
+        <ItemsControl Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Days}" MinHeight="26">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <UniformGrid Rows="1" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:CalendarDayViewModel">
+              <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1,1,0,1" Background="Transparent"
+                      DoubleTapped="OnAllDayDoubleTapped" MinHeight="26">
+                <ItemsControl ItemsSource="{Binding AllDay}" Margin="2">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:EventChipViewModel">
+                      <Border Background="{Binding Accent}" CornerRadius="3" Padding="6,2" Margin="0,1"
+                              PointerPressed="OnChipPressed" DoubleTapped="OnChipDoubleTapped">
+                        <TextBlock Text="{Binding Title}" Foreground="White" FontSize="12" TextTrimming="CharacterEllipsis" />
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <ScrollViewer x:Name="TimeScroll" Grid.Row="2" Grid.ColumnSpan="2">
+          <Grid ColumnDefinitions="60,*">
+            <!-- Hour labels -->
+            <ItemsControl ItemsSource="{Binding Hours}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                  <!-- Fixed 48 px per hour (must match the grid lines); the label is shifted up onto its line
+                       with a transform, which unlike a negative margin does not shrink the slot. -->
+                  <Panel Height="48">
+                    <TextBlock Text="{Binding}" FontSize="11" Classes="muted" HorizontalAlignment="Right" VerticalAlignment="Top"
+                               Margin="0,0,6,0" RenderTransform="translateY(-7px)" />
+                  </Panel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <ItemsControl Grid.Column="1" ItemsSource="{Binding Days}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <UniformGrid Rows="1" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:CalendarDayViewModel">
+                  <Panel Height="1152" Background="Transparent" DoubleTapped="OnDayColumnDoubleTapped">
+                    <!-- Hour and half-hour lines -->
+                    <ItemsControl ItemsSource="{Binding $parent[UserControl].((vm:CalendarViewModel)DataContext).Hours}" IsHitTestVisible="False">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                          <Border Height="48" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1,1,0,0">
+                            <Border Height="24" VerticalAlignment="Bottom" BorderBrush="{DynamicResource DividerBrush}"
+                                    BorderThickness="0,1,0,0" Opacity="0.45" />
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <ItemsControl ItemsSource="{Binding Events}" Margin="2,0,4,0">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                          <controls:TimeGridPanel />
+                        </ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:EventBlockViewModel">
+                          <Border CornerRadius="4" ClipToBounds="True" Background="{DynamicResource SelectedBrush}"
+                                  BorderBrush="{Binding Accent}" BorderThickness="3,0,0,0" Padding="6,2"
+                                  PointerPressed="OnBlockPressed" DoubleTapped="OnBlockDoubleTapped" ToolTip.Tip="{Binding TimeText}">
+                            <StackPanel>
+                              <StackPanel Orientation="Horizontal" Spacing="4">
+                                <TextBlock Text="↻" FontSize="11" IsVisible="{Binding IsRecurring}" ToolTip.Tip="Repeats" />
+                                <TextBlock Text="👥" FontSize="10" IsVisible="{Binding IsMeeting}" ToolTip.Tip="Meeting" />
+                                <TextBlock Text="{Binding Title}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                              </StackPanel>
+                              <TextBlock Text="{Binding Location}" FontSize="11" Classes="muted" IsVisible="{Binding HasLocation}"
+                                         TextTrimming="CharacterEllipsis" />
+                              <TextBlock Text="{Binding TimeText}" FontSize="11" Classes="muted" />
+                            </StackPanel>
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- Now -->
+                    <Canvas IsHitTestVisible="False" IsVisible="{Binding HasNowLine}">
+                      <Border Canvas.Top="{Binding NowTop}" Height="2" Background="#C50F1F"
+                              Width="{Binding $parent[Panel].Bounds.Width}" />
+                    </Canvas>
+                  </Panel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Grid>
+        </ScrollViewer>
+      </Grid>
+    </Panel>
+  </DockPanel>
+</UserControl>

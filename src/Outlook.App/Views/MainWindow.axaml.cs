@@ -61,6 +61,7 @@ public partial class MainWindow : Window
         if (Vm is not { } vm) return;
         vm.ComposeRequested += compose => new ComposeWindow { DataContext = compose }.Show(this);
         vm.Confirm = ConfirmAsync;
+        vm.Reminders.ShowRequested += ShowReminders;
     }
 
     private bool _closeAfterFlush;
@@ -83,6 +84,23 @@ public partial class MainWindow : Window
         base.OnClosed(e);
         if (Vm is { } vm)
             await vm.StopAsync();
+    }
+
+    private RemindersWindow? _reminders;
+
+    private void ShowReminders()
+    {
+        if (Vm is not { } vm) return;
+        if (_reminders is null)
+        {
+            _reminders = new RemindersWindow { DataContext = vm.Reminders };
+            _reminders.Closed += (_, _) => _reminders = null;
+            _reminders.Show(this);
+        }
+        else
+        {
+            _reminders.Activate();
+        }
     }
 
     // ───────────────────────────── Context menus ─────────────────────────────

@@ -18,6 +18,10 @@ public record OutgoingMessage(
     string? InReplyTo = null,
     string? References = null,
     IReadOnlyList<OutgoingAttachment>? Attachments = null,
-    string? MessageId = null);
+    string? MessageId = null,
+    OutgoingCalendar? Calendar = null);
 
 public record OutgoingAttachment(string FileName, string ContentType, byte[] Data);
+
+/// <summary>A meeting invitation, update, cancellation or reply carried as text/calendar (iMIP, RFC 6047).</summary>
+public record OutgoingCalendar(string Ics, string Method);

@@ -12,11 +12,12 @@ namespace Outlook.App.ViewModels;
 /// </summary>
 public partial class ConversationCardViewModel : ObservableObject
 {
-    public ConversationCardViewModel(MailMessage message, string? folderLabel, IMailService mail, IMailStore store)
+    public ConversationCardViewModel(MailMessage message, string? folderLabel, IMailService mail, IMailStore store,
+        Func<string, Task<InvitationViewModel?>>? invitationFor = null)
     {
         Message = message;
         FolderLabel = folderLabel;
-        Body = new MessageBodyViewModel(mail, store);
+        Body = new MessageBodyViewModel(mail, store, invitationFor);
     }
 
     public MailMessage Message { get; }
