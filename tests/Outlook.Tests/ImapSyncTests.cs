@@ -103,19 +103,35 @@ public sealed class ImapSyncTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Delete_without_a_trash_folder_removes_from_the_server()
+    public async Task Delete_creates_trash_and_deleting_from_trash_is_permanent()
     {
         if (!Enabled) return;
 
         await SendToSelfAsync("Bye");
         var message = Assert.Single(await InboxMessagesAsync());
 
+        // A fresh mailbox has no Trash (like an account used over POP3): Delete must not be permanent.
         await _service.DeleteAsync([message]);
-        Assert.Empty(await InboxMessagesAsync());
-
-        // Not just the cache: a full resync must not bring it back.
         await _service.SyncAccountAsync(_account);
         Assert.Empty(await InboxMessagesAsync());
+        var trash = (await _store.GetFoldersAsync(_account.Id)).Single(f => f.Special == SpecialFolder.Trash);
+        var trashed = Assert.Single(await _store.GetMessagesAsync(trash.Id));
+
+        await _service.DeleteAsync([trashed]);
+        await _service.SyncAccountAsync(_account);
+        Assert.Empty(await _store.GetMessagesAsync(trash.Id));
+    }
+
+    [Fact]
+    public async Task Sending_creates_a_sent_folder_when_missing()
+    {
+        if (!Enabled) return;
+
+        var report = await _service.SendAsync(_account, new OutgoingMessage([_account.Email], [], [], "Keep a copy", "x"));
+
+        Assert.True(report.SavedToSent);
+        var sent = (await _store.GetFoldersAsync(_account.Id)).Single(f => f.Special == SpecialFolder.Sent);
+        Assert.Equal("Keep a copy", Assert.Single(await _store.GetMessagesAsync(sent.Id)).Subject);
     }
 
     [Fact]

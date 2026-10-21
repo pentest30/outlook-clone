@@ -50,7 +50,7 @@ public interface IMailService
 
     Task MoveAsync(IReadOnlyList<MailMessage> messages, MailFolder target, CancellationToken ct = default);
 
-    /// <summary>Moves to Deleted Items, or deletes permanently when already there.</summary>
+    /// <summary>Moves to Trash (creating it if needed), or deletes permanently when already there.</summary>
     Task DeleteAsync(IReadOnlyList<MailMessage> messages, CancellationToken ct = default);
 
     /// <summary>Moves to the Archive folder, creating it on the server if it does not exist.</summary>

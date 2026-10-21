@@ -28,6 +28,8 @@ public static partial class EmailHtml
         s = DangerousTags().Replace(s, "");
         s = EventAttributes().Replace(s, "");
         s = ScriptUrls().Replace(s, "$1=\"#\"");
+        // <img src=""> is a sender bug; browsers draw nothing, but the renderer would draw a broken-image box.
+        s = EmptyImages().Replace(s, "");
         return s;
     }
 
@@ -57,6 +59,9 @@ public static partial class EmailHtml
 
     [GeneratedRegex(@"\b(href|src)\s*=\s*[""']?\s*(javascript|vbscript|data:text/html)[^""'\s>]*[""']?", RegexOptions.IgnoreCase)]
     private static partial Regex ScriptUrls();
+
+    [GeneratedRegex(@"<img\b[^>]*\bsrc\s*=\s*(""\s*""|'\s*')[^>]*>", RegexOptions.IgnoreCase)]
+    private static partial Regex EmptyImages();
 
     // Pictures, backgrounds and stylesheets loaded from the web.
     [GeneratedRegex(@"(<img\b[^>]*\bsrc\s*=\s*[""']?\s*https?:|\bbackground\s*=\s*[""']?\s*https?:|url\(\s*[""']?\s*https?:|<link\b[^>]*\bhref\s*=\s*[""']?\s*https?:)", RegexOptions.IgnoreCase)]

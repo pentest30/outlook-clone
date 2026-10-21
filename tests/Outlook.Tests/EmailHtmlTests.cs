@@ -19,6 +19,12 @@ public class EmailHtmlTests
         Assert.Contains("<p>Hi</p>", html);
     }
 
+    [Fact]
+    public void Drops_images_without_a_source()
+    {
+        Assert.Equal("<p>a</p><img src=\"cid:x\">", EmailHtml.Sanitize("<p>a</p><img class=\"image\" src=\"\"><img src=\"cid:x\">"));
+    }
+
     [Theory]
     [InlineData("<img src=\"https://track.example/p.gif\">", true)]
     [InlineData("<div style=\"background: url('http://x/y.png')\">", true)]

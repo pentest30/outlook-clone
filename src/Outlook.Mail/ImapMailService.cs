@@ -529,23 +529,25 @@ public sealed class ImapMailService(Func<MailDbContext> createContext, ICredenti
         await RecountAsync(db, [.. sourceIds, targetId], ct);
     }
 
+    /// <summary>
+    /// Moves to Trash (created if the account has none, so Delete is never silently permanent), or
+    /// deletes for good when the messages are already in Trash.
+    /// </summary>
     public async Task DeleteAsync(IReadOnlyList<MailMessage> messages, CancellationToken ct = default)
     {
         foreach (var group in messages.GroupBy(m => m.FolderId))
         {
             MailFolder source;
-            MailFolder? trash;
             await using (var db = createContext())
-            {
                 source = await db.Folders.AsNoTracking().Include(f => f.Account).SingleAsync(f => f.Id == group.Key, ct);
-                trash = await db.Folders.AsNoTracking()
-                    .FirstOrDefaultAsync(f => f.AccountId == source.AccountId && f.Special == SpecialFolder.Trash, ct);
-            }
 
-            if (trash is not null && source.Special != SpecialFolder.Trash)
-                await MoveAsync(group.ToList(), trash, ct);
-            else
+            if (source.Special == SpecialFolder.Trash)
+            {
                 await DeletePermanentlyAsync(source.Account!, source, group.ToList(), ct);
+                continue;
+            }
+            var trash = await EnsureFolderAsync(source.Account!, SpecialFolder.Trash, "Trash", ct);
+            await MoveAsync(group.ToList(), trash, ct);
         }
     }
 
@@ -636,14 +638,12 @@ public sealed class ImapMailService(Func<MailDbContext> createContext, ICredenti
             catch (Exception) { /* already delivered; a failed QUIT changes nothing */ }
         }
 
-        // Keep a copy in Sent. Gmail already does this server-side; de-duplicating is a Phase 3 item.
+        // Keep a copy in Sent, creating the folder if the account has never had one (common for
+        // mailboxes used over POP3), as Outlook and Thunderbird do. Gmail already saves a copy
+        // server-side; de-duplicating that is a Phase 3 item.
         try
         {
-            MailFolder? sent;
-            await using (var db = createContext())
-                sent = await db.Folders.FirstOrDefaultAsync(f => f.AccountId == account.Id && f.Special == SpecialFolder.Sent, ct);
-            if (sent is null)
-                return new SendReport(SavedToSent: false, Problem: null);
+            var sent = await EnsureFolderAsync(account, SpecialFolder.Sent, "Sent", ct);
             await ConnectionFor(account, Lane.Interactive).UseAsync(async client =>
             {
                 var folder = await client.GetFolderAsync(sent.FullName, ct);

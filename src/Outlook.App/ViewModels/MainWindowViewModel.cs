@@ -631,7 +631,8 @@ public partial class MainWindowViewModel : ObservableObject
     private async Task DeleteAsync()
     {
         var targets = ActionTargets();
-        if (SelectedFolder?.Model.Special == SpecialFolder.Trash || !Folders.Any(f => f.Model.Special == SpecialFolder.Trash))
+        // Only deleting from Trash is permanent; elsewhere the service moves to Trash (creating it if needed).
+        if (SelectedFolder?.Model.Special == SpecialFolder.Trash && _activeSearch is null)
         {
             var count = ModelsOf(targets).Count;
             var question = count == 1

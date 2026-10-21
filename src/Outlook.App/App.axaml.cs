@@ -42,8 +42,11 @@ public partial class App : Application
     }
 
     // Everything local lives under %LOCALAPPDATA%\OutlookClone, like Outlook's own data folder.
+    // OUTLOOKCLONE_DATA points it elsewhere, e.g. to keep a test profile apart from a real one.
     private static readonly string DataDir =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OutlookClone");
+        Environment.GetEnvironmentVariable("OUTLOOKCLONE_DATA") is { Length: > 0 } custom
+            ? custom
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OutlookClone");
 
     private static void LogError(Exception ex)
     {
