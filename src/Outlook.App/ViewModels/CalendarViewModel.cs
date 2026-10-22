@@ -346,6 +346,30 @@ public partial class CalendarViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(HasSelected))]
     private Task DeleteSelectedAsync() => Selected is { } s ? DeleteAsync(s) : Task.CompletedTask;
 
+    /// <summary>Only items I organise can be dragged; someone else's meeting is theirs to move.</summary>
+    public static bool CanMove(AppointmentOccurrence occurrence) => occurrence.Appointment.IsOrganizer;
+
+    /// <summary>Drag to move or resize. For a series, only the dragged occurrence moves (as in Outlook).</summary>
+    public async Task MoveAsync(AppointmentOccurrence occurrence, DateTimeOffset newStart, DateTimeOffset newEnd)
+    {
+        if (_account() is not { } account) return;
+        if (newStart == occurrence.Start && newEnd == occurrence.End) return;
+        if (!CanMove(occurrence))
+        {
+            Status = "This meeting was organized by someone else, so only they can move it.";
+            return;
+        }
+        try
+        {
+            Status = await _calendar.MoveAsync(account, occurrence, newStart, newEnd) ?? "";
+        }
+        catch (Exception ex)
+        {
+            Status = $"Couldn't move it: {ex.Message}";
+        }
+        await ReloadAsync();
+    }
+
     public async Task DeleteAsync(AppointmentOccurrence occurrence)
     {
         if (_account() is not { } account) return;
@@ -354,7 +378,7 @@ public partial class CalendarViewModel : ObservableObject
         {
             var answer = AskOccurrenceOrSeries is null ? false : await AskOccurrenceOrSeries(occurrence);
             if (answer is null) return;
-            if (answer == true) onlyThis = occurrence.Start;
+            if (answer == true) onlyThis = occurrence.RecurrenceId ?? occurrence.Start;
         }
         try
         {

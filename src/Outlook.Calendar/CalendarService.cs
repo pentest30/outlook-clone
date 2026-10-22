@@ -57,7 +57,9 @@ public sealed class CalendarService(Func<MailDbContext> createContext, IMailServ
         {
             var start = Ics.ToInstant(occurrence.Period.StartTime);
             var end = occurrence.Period.EffectiveEndTime is { } e ? Ics.ToInstant(e) : start + length;
-            yield return new AppointmentOccurrence(a, start, end);
+            // A moved occurrence comes from its override event, which remembers where the rule put it.
+            var id = occurrence.Source is CalendarEvent { RecurrenceIdentifier.StartTime: { } rid } ? Ics.ToInstant(rid) : start;
+            yield return new AppointmentOccurrence(a, start, end, id);
         }
     }
 
@@ -115,7 +117,7 @@ public sealed class CalendarService(Func<MailDbContext> createContext, IMailServ
         return (row, problem);
     }
 
-    public async Task<string?> DeleteAsync(Account account, Appointment appointment, DateTimeOffset? occurrenceStart, CancellationToken ct = default)
+    public async Task<string?> DeleteAsync(Account account, Appointment appointment, DateTimeOffset? occurrenceId, CancellationToken ct = default)
     {
         await using var db = createContext();
         var row = await db.Appointments.SingleOrDefaultAsync(a => a.Id == appointment.Id, ct);
@@ -124,13 +126,13 @@ public sealed class CalendarService(Func<MailDbContext> createContext, IMailServ
         var master = Ics.Master(calendar);
         var notify = row.IsOrganizer && master.Attendees.Count > 0;
 
-        if (occurrenceStart is { } start && row.IsRecurring)
+        if (occurrenceId is { } id && row.IsRecurring)
         {
             // One occurrence: an EXDATE in the series (and the cancellation names just that occurrence).
-            var exdate = row.IsAllDay
-                ? new CalDateTime(DateOnly.FromDateTime(start.UtcDateTime))
-                : new CalDateTime(start.UtcDateTime, "UTC", true).ToTimeZone(master.DtStart!.TzId);
+            var exdate = OccurrenceKey(row, master, id);
             master.ExceptionDates.Add(exdate);
+            if (FindOverride(calendar, id) is { } moved)
+                RemoveEvent(calendar, moved);
             master.Sequence = ++row.Sequence;
             row.Ics = Ics.Serialize(calendar);
             row.LastModifiedUtc = DateTimeOffset.UtcNow;
@@ -163,6 +165,93 @@ public sealed class CalendarService(Func<MailDbContext> createContext, IMailServ
         var recipients = master.Attendees.Select(a => Ics.EmailOf(a.Value)).ToList();
         return SendAsync(account, cancel, "CANCEL", recipients, "Canceled: " + row.Title, "cancellation", ct);
     }
+
+    public async Task<string?> MoveAsync(Account account, AppointmentOccurrence occurrence, DateTimeOffset newStart, DateTimeOffset newEnd,
+        CancellationToken ct = default)
+    {
+        if (newEnd <= newStart)
+            throw new ArgumentException("The end must be after the start.", nameof(newEnd));
+
+        await using var db = createContext();
+        var row = await db.Appointments.SingleOrDefaultAsync(a => a.Id == occurrence.Appointment.Id, ct);
+        if (row is null) return null;
+        if (!row.IsOrganizer)
+            throw new InvalidOperationException("Only the organizer can move this meeting.");
+
+        var calendar = Ics.Parse(row.Ics);
+        var master = Ics.Master(calendar);
+        var tzId = master.DtStart?.TzId;
+        if (!row.IsAllDay && tzId is null)
+        {
+            tzId = Ics.LocalTimeZoneId();
+            calendar.AddTimeZone(tzId);
+        }
+        CalDateTime At(DateTimeOffset t) => row.IsAllDay
+            ? new CalDateTime(DateOnly.FromDateTime(t.UtcDateTime))
+            : new CalDateTime(t.UtcDateTime, "UTC", true).ToTimeZone(tzId);
+
+        row.Sequence++;
+        if (!row.IsRecurring)
+        {
+            master.DtStart = At(newStart);
+            master.DtEnd = At(newEnd);
+        }
+        else
+        {
+            // Only this occurrence: an override event with the same UID and the occurrence's
+            // RECURRENCE-ID replaces it (RFC 5545 section 3.8.4.4). Moving it again edits the same override.
+            var id = occurrence.RecurrenceId ?? occurrence.Start;
+            var moved = FindOverride(calendar, id);
+            if (moved is null)
+            {
+                moved = master.Copy<CalendarEvent>() ?? throw new InvalidOperationException("Could not copy the event.");
+                moved.RecurrenceRule = null;
+                moved.ExceptionDates.Clear();
+                moved.RecurrenceIdentifier = new RecurrenceIdentifier(OccurrenceKey(row, master, id));
+                calendar.Events.Add(moved);
+            }
+            moved.DtStart = At(newStart);
+            moved.DtEnd = At(newEnd);
+            moved.Sequence = row.Sequence;
+            moved.DtStamp = CalDateTime.UtcNow;
+        }
+        master.Sequence = row.Sequence;
+        master.DtStamp = CalDateTime.UtcNow;
+
+        var isOrganizer = row.IsOrganizer;
+        var response = row.MyResponse;
+        Fill(row, calendar, account.Email);
+        row.IsOrganizer = isOrganizer;
+        row.MyResponse = response;
+        await db.SaveChangesAsync(ct);
+
+        if (!row.IsMeeting || master.Attendees.Count == 0)
+            return null;
+        var recipients = master.Attendees.Select(a => Ics.EmailOf(a.Value)).ToList();
+        return await SendAsync(account, calendar, "REQUEST", recipients, row.Title, "update", ct)
+               ?? "Update sent to attendees.";
+    }
+
+    /// <summary>The value identifying an occurrence of this series (RECURRENCE-ID / EXDATE), in the series' own zone.</summary>
+    private static CalDateTime OccurrenceKey(Appointment row, CalendarEvent master, DateTimeOffset id) =>
+        row.IsAllDay
+            ? new CalDateTime(DateOnly.FromDateTime(id.UtcDateTime))
+            : new CalDateTime(id.UtcDateTime, "UTC", true).ToTimeZone(master.DtStart!.TzId);
+
+    /// <summary>
+    /// Removes exactly this event. Events.Remove matches by UID, and an override shares its series'
+    /// UID, so it would remove the series itself instead.
+    /// </summary>
+    private static void RemoveEvent(Ical.Net.Calendar calendar, CalendarEvent target)
+    {
+        var keep = calendar.Events.Where(e => !ReferenceEquals(e, target)).ToList();
+        calendar.Events.Clear();
+        foreach (var e in keep)
+            calendar.Events.Add(e);
+    }
+
+    private static CalendarEvent? FindOverride(Ical.Net.Calendar calendar, DateTimeOffset id) =>
+        calendar.Events.FirstOrDefault(e => e.RecurrenceIdentifier?.StartTime is { } rid && Ics.ToInstant(rid) == id);
 
     public async Task DismissReminderAsync(Appointment appointment, DateTimeOffset occurrenceStart, CancellationToken ct = default)
     {

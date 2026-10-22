@@ -118,9 +118,15 @@ Deferred from Phase 1:
   cancellations offer "Remove from calendar"; replies are recorded on my meeting when opened
 - Reminders window (checks every 30 s): Dismiss, Snooze 5 min, Open
 - Ctrl+1 Mail, Ctrl+2 Calendar; Delete / Enter on the selected item; Ctrl+Left/Right to move
+- Drag to move (body) and resize (top or bottom edge) in the day/week grids, snapped to 15 minutes,
+  with a ghost showing the new times; drag across days in the all-day strip and the month view;
+  Escape cancels. Dragging one occurrence of a series moves only that occurrence (an override
+  event with its RECURRENCE-ID); meetings I organise send attendees an update; meetings organised
+  by someone else cannot be dragged. Covered by headless UI tests (tests/Outlook.App.Tests).
 
 ### Phase 4b — still to do
-- Drag to move and resize appointments; edit a single occurrence of a series (RECURRENCE-ID)
+- Edit a single occurrence's details (title, location) from the editor; editing the series
+  currently drops moved occurrences, as Outlook warns it will
 - CalDAV sync (and Microsoft Graph for Microsoft 365) for servers that have a calendar
 - Free/busy and the scheduling assistant; room booking
 - Time zone picker per appointment; showing a second time zone

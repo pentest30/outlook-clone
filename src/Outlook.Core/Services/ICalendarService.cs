@@ -40,8 +40,18 @@ public interface ICalendarService
     /// </summary>
     Task<(Appointment Saved, string? Problem)> SaveAsync(Account account, Appointment? existing, AppointmentDraft draft, CancellationToken ct = default);
 
-    /// <summary>Deletes one occurrence (occurrenceStart set) or the whole series; tells attendees if I organise it.</summary>
-    Task<string?> DeleteAsync(Account account, Appointment appointment, DateTimeOffset? occurrenceStart, CancellationToken ct = default);
+    /// <summary>
+    /// Deletes one occurrence of a series (pass its <see cref="AppointmentOccurrence.RecurrenceId"/>) or the
+    /// whole item (null); tells attendees if I organise it.
+    /// </summary>
+    Task<string?> DeleteAsync(Account account, Appointment appointment, DateTimeOffset? occurrenceId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Gives an occurrence a new start and end (drag to move or resize). For a series only that
+    /// occurrence changes, as in Outlook. Meetings I organise send attendees an update; meetings
+    /// organised by someone else cannot be moved.
+    /// </summary>
+    Task<string?> MoveAsync(Account account, AppointmentOccurrence occurrence, DateTimeOffset newStart, DateTimeOffset newEnd, CancellationToken ct = default);
 
     /// <summary>Reads the calendar part of a downloaded message, or null if it has none.</summary>
     Invitation? ParseInvitation(string ics);

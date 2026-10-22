@@ -63,9 +63,15 @@ public class Appointment
 }
 
 /// <summary>One concrete occurrence of an appointment (the appointment itself when it does not repeat).</summary>
-public sealed record AppointmentOccurrence(Appointment Appointment, DateTimeOffset Start, DateTimeOffset End)
+/// <param name="RecurrenceId">
+/// For an occurrence of a series: the start the rule gave it (iCalendar RECURRENCE-ID), which stays
+/// its identity even after it is moved. Null for single appointments.
+/// </param>
+public sealed record AppointmentOccurrence(Appointment Appointment, DateTimeOffset Start, DateTimeOffset End, DateTimeOffset? RecurrenceId = null)
 {
     public bool IsAllDay => Appointment.IsAllDay;
+    /// <summary>True when this occurrence was moved away from where the series puts it.</summary>
+    public bool IsException => RecurrenceId is { } id && id != Start;
 }
 
 public enum Repeat

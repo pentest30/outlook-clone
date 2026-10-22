@@ -195,6 +195,82 @@ public sealed class CalendarTests : IDisposable
     }
 
     [Fact]
+    public async Task Moving_a_single_appointment_changes_its_time()
+    {
+        var start = Local(2026, 11, 2, 9);
+        await _calendar.SaveAsync(_me, null, Draft("Dentist", start, TimeSpan.FromMinutes(30)));
+        var occurrence = Assert.Single(await _calendar.GetOccurrencesAsync(_me.Id, Local(2026, 11, 2, 0), Local(2026, 11, 3, 0)));
+
+        await _calendar.MoveAsync(_me, occurrence, Local(2026, 11, 3, 14), Local(2026, 11, 3, 15));
+
+        Assert.Empty(await _calendar.GetOccurrencesAsync(_me.Id, Local(2026, 11, 2, 0), Local(2026, 11, 3, 0)));
+        var moved = Assert.Single(await _calendar.GetOccurrencesAsync(_me.Id, Local(2026, 11, 3, 0), Local(2026, 11, 4, 0)));
+        Assert.Equal(Local(2026, 11, 3, 14), moved.Start);
+        Assert.Equal(Local(2026, 11, 3, 15), moved.End);   // resized too: 30 min became 1 h
+        Assert.Equal("Dentist", moved.Appointment.Title);
+    }
+
+    [Fact]
+    public async Task Moving_one_occurrence_of_a_series_leaves_the_others()
+    {
+        await _calendar.SaveAsync(_me, null, Draft("Standup", Local(2026, 11, 2, 9), TimeSpan.FromMinutes(15), Repeat.Daily,
+            until: new DateOnly(2026, 11, 6)));
+        var week = await _calendar.GetOccurrencesAsync(_me.Id, Local(2026, 11, 2, 0), Local(2026, 11, 7, 0));
+        Assert.Equal(5, week.Count);
+        var wednesday = week[2];
+
+        // Drag Wednesday's standup to 11:00 and make it 30 minutes.
+        await _calendar.MoveAsync(_me, wednesday, Local(2026, 11, 4, 11), Local(2026, 11, 4, 11, 30));
+        var after = await _calendar.GetOccurrencesAsync(_me.Id, Local(2026, 11, 2, 0), Local(2026, 11, 7, 0));
+        Assert.Equal(5, after.Count);
+        var moved = Assert.Single(after, o => o.IsException);
+        Assert.Equal(Local(2026, 11, 4, 11), moved.Start);
+        Assert.Equal(Local(2026, 11, 4, 11, 30), moved.End);
+        Assert.Equal(wednesday.Start, moved.RecurrenceId);   // still known as Wednesday 9:00
+        Assert.All(after.Where(o => !o.IsException), o => Assert.Equal(9, o.Start.ToLocalTime().Hour));
+
+        // Moving it again edits the same override instead of adding another.
+        await _calendar.MoveAsync(_me, moved, Local(2026, 11, 4, 16), Local(2026, 11, 4, 16, 30));
+        var again = await _calendar.GetOccurrencesAsync(_me.Id, Local(2026, 11, 2, 0), Local(2026, 11, 7, 0));
+        Assert.Equal(5, again.Count);
+        Assert.Equal(Local(2026, 11, 4, 16), Assert.Single(again, o => o.IsException).Start);
+
+        // Deleting the moved occurrence removes it, not its neighbours.
+        var toDelete = Assert.Single(again, o => o.IsException);
+        await _calendar.DeleteAsync(_me, toDelete.Appointment, toDelete.RecurrenceId);
+        var final = await _calendar.GetOccurrencesAsync(_me.Id, Local(2026, 11, 2, 0), Local(2026, 11, 7, 0));
+        Assert.Equal(4, final.Count);
+        Assert.DoesNotContain(final, o => o.Start.ToLocalTime().Day == 4);
+    }
+
+    [Fact]
+    public async Task Moving_a_meeting_I_organise_sends_an_update()
+    {
+        var start = Local(2026, 11, 9, 10);
+        await _calendar.SaveAsync(_me, null, Draft("Review", start, TimeSpan.FromHours(1), attendees: "ana@x.test"));
+        var occurrence = Assert.Single(await _calendar.GetOccurrencesAsync(_me.Id, start.AddHours(-1), start.AddHours(2)));
+
+        var message = await _calendar.MoveAsync(_me, occurrence, start.AddHours(2), start.AddHours(3));
+
+        Assert.Equal("Update sent to attendees.", message);
+        var update = _calendar.ParseInvitation(_mail.Sent[^1].Calendar!.Ics)!;
+        Assert.Equal("REQUEST", update.Method);
+        Assert.Equal(1, update.Sequence);   // attendees' calendars replace the older version
+        Assert.Equal(start.AddHours(2), update.Start);
+    }
+
+    [Fact]
+    public async Task Meetings_organised_by_others_cannot_be_moved()
+    {
+        var start = Local(2026, 11, 10, 10);
+        await _calendar.SaveAsync(_me, null, Draft("Their meeting", start, TimeSpan.FromHours(1), attendees: "ana@x.test"));
+        await _calendar.RespondAsync(_ana, _calendar.ParseInvitation(_mail.Sent[0].Calendar!.Ics)!, MeetingResponse.Accepted, sendReply: false);
+        var hers = Assert.Single(await _calendar.GetOccurrencesAsync(_ana.Id, start.AddHours(-1), start.AddHours(2)));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _calendar.MoveAsync(_ana, hers, start.AddHours(1), start.AddHours(2)));
+    }
+
+    [Fact]
     public void Broken_calendar_text_is_ignored()
     {
         Assert.Null(_calendar.ParseInvitation("not a calendar"));
