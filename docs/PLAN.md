@@ -87,6 +87,20 @@ Deferred from Phase 1:
   go to `errors.log` and the status bar instead of crashing
 - Shortcuts: Ctrl+N, Ctrl+R, Ctrl+Shift+R, Ctrl+F, Ctrl+E, Delete, Backspace, Ctrl+Q/U, Insert, F9
 
+### Everyday use (done)
+- Settings window (Ctrl+, or the gear): theme, new-mail alerts, conversations, mark as read when
+  opened, undo-send delay, signature per account, default reminder; applied immediately
+- Signatures: in new mail, and above the quoted original in replies/forwards (optional)
+- Address autocomplete in To/Cc/Bcc and meeting attendees, from an address book fed by sync
+  and sending; ranked by how often you write to someone
+- Desktop alerts for new mail while in the background (click to open), tray icon with unread
+  count, app icon (tools/IconGen)
+- Windows installer: `pwsh build/package.ps1` makes releases/OutlookClone.Desktop-win-Setup.exe
+  (Velopack, per-user, self-contained, Start menu and desktop shortcuts, uninstaller)
+
+Still to do here: automatic updates (needs a place to publish releases), code signing (avoids
+the SmartScreen warning on first run), "close to tray"
+
 ### Phase 2b — still to do
 - Server-side search for mail older than the cached window
 - Flags with due dates, pin
