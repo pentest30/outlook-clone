@@ -1,6 +1,11 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
+  <!-- The app icon on every window (title bar, taskbar, Alt+Tab). -->
+  <Style Selector=":is(Window)">
+    <Setter Property="Icon" Value="/Assets/app.ico" />
+  </Style>
+
   <!-- Flat command-bar buttons, like Outlook's simplified ribbon. -->
   <Style Selector="Button.command">
     <Setter Property="Background" Value="Transparent" />

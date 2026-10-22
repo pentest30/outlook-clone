@@ -53,6 +53,53 @@ public partial class MainWindowViewModel : ObservableObject
         _ = InitializeAsync();
     }
 
+    /// <summary>Raised with unread mail that arrived while the window was in the background.</summary>
+    public event Action<IReadOnlyList<MailMessage>>? NewMailArrived;
+
+    /// <summary>Set by the view: whether the user is looking at the window (alerts are only for the background).</summary>
+    public Func<bool>? IsInForeground { get; set; }
+
+    /// <summary>Highest Inbox message id already seen; null until the first sync sets the baseline.</summary>
+    private int? _notifiedThroughId;
+
+    /// <summary>Unread Inbox messages, for the tray icon.</summary>
+    [ObservableProperty] private int _inboxUnreadCount;
+
+    /// <summary>
+    /// Alerts for Inbox mail newer than anything seen before. The baseline is taken when the first
+    /// sync finishes, so adding an account (or a long time offline) does not alert for old mail.
+    /// </summary>
+    private async Task CheckNewMailAsync(bool setBaseline = false)
+    {
+        if (_account is null || Folders.FirstOrDefault(f => f.Model.Special == SpecialFolder.Inbox) is not { } inbox) return;
+        var recent = await _store.GetMessagesAsync(inbox.Id, 50);
+        var newest = recent.Count == 0 ? 0 : recent.Max(m => m.Id);
+        if (setBaseline || _notifiedThroughId is null)
+        {
+            if (setBaseline) _notifiedThroughId = Math.Max(_notifiedThroughId ?? 0, newest);
+            return;
+        }
+        var fresh = recent.Where(m => m.Id > _notifiedThroughId && !m.IsRead).OrderByDescending(m => m.Date).ToList();
+        _notifiedThroughId = Math.Max(_notifiedThroughId.Value, newest);
+        if (fresh.Count > 0 && _settings.NewMailNotifications && IsInForeground?.Invoke() != true)
+            NewMailArrived?.Invoke(fresh);
+    }
+
+    /// <summary>From a desktop alert: show the message in the Inbox.</summary>
+    public async Task ShowMessageAsync(MailMessage message)
+    {
+        IsCalendarActive = false;
+        if (_activeSearch is not null) await ClearSearchAsync();
+        var folder = Folders.FirstOrDefault(f => f.Id == message.FolderId);
+        if (folder is null) return;
+        if (SelectedFolder != folder)
+        {
+            SelectedFolder = folder;
+            await ReloadMessagesAsync();
+        }
+        SelectedMessage = Messages.FirstOrDefault(m => m.ThreadInFolder.Any(t => t.Id == message.Id));
+    }
+
     /// <summary>Raised to open the Settings window.</summary>
     public event Action<SettingsViewModel>? SettingsRequested;
 
@@ -195,6 +242,7 @@ public partial class MainWindowViewModel : ObservableObject
         Reminders.Start();
         _syncTimer.Start();
         await SyncAsync();
+        await CheckNewMailAsync(setBaseline: true);
 
         _pushCts = new CancellationTokenSource();
         var token = _pushCts.Token;
@@ -216,6 +264,7 @@ public partial class MainWindowViewModel : ObservableObject
             await Task.Run(() => _mail.SyncAccountAsync(account, progress));
             StatusText = $"All folders are up to date. Last updated {DateTime.Now:t}";
             await ReloadFoldersAsync();
+            await CheckNewMailAsync();
         }
         catch (Exception ex)
         {
@@ -238,6 +287,7 @@ public partial class MainWindowViewModel : ObservableObject
             var account = _account;
             await Task.Run(() => _mail.SyncFolderAsync(account, folder));
             await ReloadFoldersAsync();
+            await CheckNewMailAsync();
         }
         catch (Exception ex)
         {
@@ -265,6 +315,7 @@ public partial class MainWindowViewModel : ObservableObject
         var folders = await _store.GetFoldersAsync(_account.Id);
         var ordered = OrderAsTree(folders).ToList();
 
+        InboxUnreadCount = folders.FirstOrDefault(f => f.Special == SpecialFolder.Inbox)?.UnreadCount ?? 0;
         var sameTree = ordered.Count == Folders.Count && ordered.Select(f => f.Folder.Id).SequenceEqual(Folders.Select(f => f.Id));
         if (sameTree)
         {

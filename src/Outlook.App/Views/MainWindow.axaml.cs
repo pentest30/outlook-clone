@@ -62,6 +62,13 @@ public partial class MainWindow : Window
         vm.ComposeRequested += compose => new ComposeWindow { DataContext = compose }.Show(this);
         vm.Confirm = ConfirmAsync;
         vm.Reminders.ShowRequested += ShowReminders;
+        vm.IsInForeground = () => IsActive && WindowState != WindowState.Minimized;
+        _toasts = new ToastManager(this, message =>
+        {
+            BringToFront();
+            _ = vm.ShowMessageAsync(message);
+        });
+        vm.NewMailArrived += messages => _toasts.ShowNewMail(messages);
         vm.SettingsRequested += settings => new SettingsWindow { DataContext = settings }.ShowDialog(this);
     }
 
@@ -87,6 +94,24 @@ public partial class MainWindow : Window
             await vm.StopAsync();
     }
 
+    private ToastManager? _toasts;
+    private WindowState _lastShownState = WindowState.Maximized;
+
+    /// <summary>Restore from minimized (to how it was) and focus, for alerts and the tray icon.</summary>
+    public void BringToFront()
+    {
+        if (!IsVisible) Show();
+        if (WindowState == WindowState.Minimized) WindowState = _lastShownState;
+        Activate();
+    }
+
+    protected override void OnPropertyChanged(Avalonia.AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == WindowStateProperty && WindowState != WindowState.Minimized)
+            _lastShownState = WindowState;
+    }
+
     private RemindersWindow? _reminders;
 
     private void ShowReminders()
@@ -96,7 +121,8 @@ public partial class MainWindow : Window
         {
             _reminders = new RemindersWindow { DataContext = vm.Reminders };
             _reminders.Closed += (_, _) => _reminders = null;
-            _reminders.Show(this);
+            // No owner: owned windows are hidden while the owner is minimized, when reminders matter most.
+            _reminders.Show();
         }
         else
         {

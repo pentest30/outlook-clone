@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
+using Avalonia.Platform;
 using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Outlook.App.ViewModels;
@@ -38,7 +40,9 @@ public partial class App : Application
         {
             ApplyTheme(_services.GetRequiredService<AppSettings>().Theme);
             var vm = _services.GetRequiredService<MainWindowViewModel>();
-            desktop.MainWindow = new MainWindow { DataContext = vm };
+            var window = new MainWindow { DataContext = vm };
+            desktop.MainWindow = window;
+            CreateTrayIcon(desktop, window, vm);
 
             // A bug in one handler should not take down the app and any unsaved compose windows with it.
             // Log it, tell the user, and keep running.
@@ -53,6 +57,36 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    /// <summary>Notification-area icon: unread count in the tooltip; open, new mail or exit from its menu.</summary>
+    private void CreateTrayIcon(IClassicDesktopStyleApplicationLifetime desktop, MainWindow window, MainWindowViewModel vm)
+    {
+        var open = new NativeMenuItem("Open Outlook Clone");
+        open.Click += (_, _) => window.BringToFront();
+        var newMail = new NativeMenuItem("New mail");
+        newMail.Click += (_, _) =>
+        {
+            window.BringToFront();
+            vm.NewMailCommand.Execute(null);
+        };
+        var exit = new NativeMenuItem("Exit");
+        exit.Click += (_, _) => desktop.Shutdown();
+
+        var tray = new TrayIcon
+        {
+            Icon = new WindowIcon(AssetLoader.Open(new Uri("avares://OutlookClone/Assets/app.ico"))),
+            ToolTipText = "Outlook Clone",
+            Menu = new NativeMenu { Items = { open, newMail, new NativeMenuItemSeparator(), exit } },
+        };
+        tray.Clicked += (_, _) => window.BringToFront();
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(MainWindowViewModel.InboxUnreadCount))
+                tray.ToolTipText = vm.InboxUnreadCount == 0 ? "Outlook Clone" : $"Outlook Clone · {vm.InboxUnreadCount} unread";
+        };
+        TrayIcon.SetIcons(this, [tray]);
+        desktop.ShutdownRequested += (_, _) => tray.Dispose();
     }
 
     // Everything local lives under %LOCALAPPDATA%\OutlookClone, like Outlook's own data folder.
