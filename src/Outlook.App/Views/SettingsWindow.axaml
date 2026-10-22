@@ -25,7 +25,7 @@
         <DockPanel DataContext="{Binding AccountsHost}" x:DataType="vm:MainWindowViewModel">
           <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,10">
             <TextBlock Text="Accounts" Classes="paneTitle" />
-            <TextBlock Text="Changes here apply straight away. "Open" switches the window to that account."
+            <TextBlock Text="Changes here apply straight away. Open switches the window to that account."
                        FontSize="12" Classes="muted" TextWrapping="Wrap" />
           </StackPanel>
           <Button DockPanel.Dock="Bottom" Classes="primary" Content="＋  Add account" Command="{Binding AddAccountCommand}"
