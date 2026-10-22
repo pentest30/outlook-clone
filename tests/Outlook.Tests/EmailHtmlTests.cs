@@ -25,6 +25,16 @@ public class EmailHtmlTests
         Assert.Equal("<p>a</p><img src=\"cid:x\">", EmailHtml.Sanitize("<p>a</p><img class=\"image\" src=\"\"><img src=\"cid:x\">"));
     }
 
+    [Fact]
+    public void Text_cells_lose_their_fixed_height_but_spacers_keep_it()
+    {
+        var html = "<table><tr><td style=\"height: 20px\">&nbsp;</td></tr>" +
+                   "<tr><td height=\"92\" style=\"height: 92px; font-size: 34px; line-height: 46px;\"><b>A long title</b></td></tr></table>";
+        Assert.Equal("<table><tr><td style=\"height: 20px\">&nbsp;</td></tr>" +
+                     "<tr><td style=\"font-size: 34px; line-height: 46px;\"><b>A long title</b></td></tr></table>",
+            EmailHtml.Sanitize(html));
+    }
+
     [Theory]
     [InlineData("<img src=\"https://track.example/p.gif\">", true)]
     [InlineData("<div style=\"background: url('http://x/y.png')\">", true)]

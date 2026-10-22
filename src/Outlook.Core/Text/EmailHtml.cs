@@ -30,8 +30,26 @@ public static partial class EmailHtml
         s = ScriptUrls().Replace(s, "$1=\"#\"");
         // <img src=""> is a sender bug; browsers draw nothing, but the renderer would draw a broken-image box.
         s = EmptyImages().Replace(s, "");
+        s = FreeTextCellHeights(s);
         return s;
     }
+
+    /// <summary>
+    /// A table cell's height is a minimum in browsers, but HtmlRenderer makes it the row's exact height and
+    /// then centres taller content in it, pushing the first lines above the cell (a Webex title cut in half).
+    /// So cells holding text lose their fixed height; empty spacer cells (&amp;nbsp;) keep it.
+    /// </summary>
+    private static string FreeTextCellHeights(string html) =>
+        CellTags().Replace(html, m =>
+        {
+            var start = m.Index + m.Length;
+            var next = CellBoundary().Match(html, start);
+            var content = html[start..(next.Success ? next.Index : html.Length)];
+            var text = Tags().Replace(content, "").Replace("&nbsp;", "").Replace("&#160;", "");
+            if (string.IsNullOrWhiteSpace(text))
+                return m.Value;
+            return HeightAttribute().Replace(HeightStyle().Replace(m.Value, ""), "");
+        });
 
     /// <summary>Plain-text mail as HTML: escaped, line breaks kept, links clickable.</summary>
     public static string FromPlainText(string text)
@@ -63,6 +81,23 @@ public static partial class EmailHtml
 
     [GeneratedRegex(@"<img\b[^>]*\bsrc\s*=\s*(""\s*""|'\s*')[^>]*>", RegexOptions.IgnoreCase)]
     private static partial Regex EmptyImages();
+
+    [GeneratedRegex(@"<t[dh]\b[^>]*>", RegexOptions.IgnoreCase)]
+    private static partial Regex CellTags();
+
+    // Where a cell's own content ends: the next cell, row or table, opening or closing.
+    [GeneratedRegex(@"</?(td|th|tr|table)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex CellBoundary();
+
+    [GeneratedRegex(@"<[^>]*>")]
+    private static partial Regex Tags();
+
+    // height: in a style attribute, but not line-height, min-height or max-height.
+    [GeneratedRegex(@"(?<![-\w])height\s*:\s*[^;""']*;?\s*", RegexOptions.IgnoreCase)]
+    private static partial Regex HeightStyle();
+
+    [GeneratedRegex(@"\s+height\s*=\s*(""[^""]*""|'[^']*'|[^\s>]+)", RegexOptions.IgnoreCase)]
+    private static partial Regex HeightAttribute();
 
     // Pictures, backgrounds and stylesheets loaded from the web.
     [GeneratedRegex(@"(<img\b[^>]*\bsrc\s*=\s*[""']?\s*https?:|\bbackground\s*=\s*[""']?\s*https?:|url\(\s*[""']?\s*https?:|<link\b[^>]*\bhref\s*=\s*[""']?\s*https?:)", RegexOptions.IgnoreCase)]
