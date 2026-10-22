@@ -1,0 +1,79 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Outlook.App.ViewModels"
+        x:Class="Outlook.App.Views.SettingsWindow"
+        x:DataType="vm:SettingsViewModel"
+        Title="Settings"
+        Width="680" Height="560" MinWidth="520" MinHeight="420"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource SurfaceBrush}">
+
+  <Window.KeyBindings>
+    <KeyBinding Gesture="Escape" Command="{Binding CancelCommand}" />
+  </Window.KeyBindings>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,1,0,0" Padding="16,10">
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+        <Button Classes="primary" Content="Save" Command="{Binding SaveCommand}" IsDefault="True" MinWidth="90" />
+        <Button Content="Cancel" Command="{Binding CancelCommand}" MinWidth="90" />
+      </StackPanel>
+    </Border>
+
+    <TabControl x:Name="Tabs" TabStripPlacement="Left" Padding="20,8">
+      <TabItem Header="General">
+        <StackPanel Spacing="14">
+          <TextBlock Text="General" Classes="paneTitle" />
+          <StackPanel Orientation="Horizontal" Spacing="12">
+            <TextBlock Text="Theme" VerticalAlignment="Center" Width="140" />
+            <ComboBox ItemsSource="{x:Static vm:SettingsViewModel.Themes}" SelectedItem="{Binding Theme}" MinWidth="160" />
+          </StackPanel>
+          <CheckBox Content="Show a desktop alert when new mail arrives" IsChecked="{Binding NewMailNotifications}" />
+          <TextBlock Text="Alerts appear in the corner of the screen while Outlook Clone is in the background. Calendar reminders always show."
+                     TextWrapping="Wrap" FontSize="12" Classes="muted" />
+        </StackPanel>
+      </TabItem>
+
+      <TabItem Header="Mail">
+        <StackPanel Spacing="14">
+          <TextBlock Text="Mail" Classes="paneTitle" />
+          <CheckBox Content="Show messages as conversations" IsChecked="{Binding ShowAsConversations}" />
+          <CheckBox Content="Mark messages as read when opened in the reading pane" IsChecked="{Binding MarkReadWhenOpened}" />
+          <StackPanel Spacing="6">
+            <TextBlock Text="Undo send" />
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <Slider Minimum="0" Maximum="10" TickFrequency="1" IsSnapToTickEnabled="True" Width="260"
+                      Value="{Binding UndoSendSeconds}" />
+              <TextBlock Text="{Binding UndoSendText}" VerticalAlignment="Center" />
+            </StackPanel>
+          </StackPanel>
+        </StackPanel>
+      </TabItem>
+
+      <TabItem Header="Signature">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,10">
+            <TextBlock Text="Signature" Classes="paneTitle" />
+            <TextBlock Text="{Binding AccountEmail, StringFormat='For {0}. Added to new messages.'}" FontSize="12" Classes="muted"
+                       IsVisible="{Binding HasAccount}" />
+            <TextBlock Text="Add an account first." FontSize="12" Classes="muted" IsVisible="{Binding !HasAccount}" />
+          </StackPanel>
+          <CheckBox DockPanel.Dock="Bottom" Content="Also add it to replies and forwards" IsChecked="{Binding SignatureOnReplies}" Margin="0,10,0,0" />
+          <TextBox Text="{Binding Signature}" AcceptsReturn="True" TextWrapping="Wrap" IsEnabled="{Binding HasAccount}"
+                   Watermark="Iqbal Baouche&#x0a;Netcom Group&#x0a;+33 1 23 45 67 89" MinHeight="160" />
+        </DockPanel>
+      </TabItem>
+
+      <TabItem Header="Calendar">
+        <StackPanel Spacing="14">
+          <TextBlock Text="Calendar" Classes="paneTitle" />
+          <StackPanel Orientation="Horizontal" Spacing="12">
+            <TextBlock Text="Default reminder" VerticalAlignment="Center" Width="140" />
+            <ComboBox ItemsSource="{x:Static vm:SettingsViewModel.ReminderOptions}" SelectedItem="{Binding DefaultReminder}" MinWidth="160" />
+          </StackPanel>
+          <TextBlock Text="Used for new appointments; each appointment can still choose its own." FontSize="12" Classes="muted" TextWrapping="Wrap" />
+        </StackPanel>
+      </TabItem>
+    </TabControl>
+  </DockPanel>
+</Window>

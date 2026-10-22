@@ -24,6 +24,7 @@
     <KeyBinding Gesture="Insert" Command="{Binding ToggleFlagCommand}" />
     <KeyBinding Gesture="Ctrl+1" Command="{Binding ShowMailCommand}" />
     <KeyBinding Gesture="Ctrl+2" Command="{Binding ShowCalendarCommand}" />
+    <KeyBinding Gesture="Ctrl+OemComma" Command="{Binding OpenSettingsCommand}" />
   </Window.KeyBindings>
 
   <Window.Resources>
@@ -108,8 +109,11 @@
             <CheckBox Grid.Column="2" Content="All folders" IsChecked="{Binding SearchAllFolders}" Foreground="White"
                       Margin="8,0,0,0" ToolTip.Tip="Search every folder, or only the one that is open" />
           </Grid>
-          <TextBlock Grid.Column="2" Text="{Binding AccountEmail}" Foreground="White"
-                     HorizontalAlignment="Right" VerticalAlignment="Center" />
+          <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6">
+            <TextBlock Text="{Binding AccountEmail}" Foreground="White" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="180" />
+            <Button Content="⚙" Command="{Binding OpenSettingsCommand}" Foreground="White" Background="Transparent"
+                    BorderThickness="0" FontSize="16" ToolTip.Tip="Settings (Ctrl+,)" />
+          </StackPanel>
         </Grid>
       </Border>
 

@@ -89,13 +89,15 @@ public partial class CalendarViewModel : ObservableObject
 
     private readonly ICalendarService _calendar;
     private readonly Func<Account?> _account;
+    private readonly Func<int?> _defaultReminder;
     private readonly DispatcherTimer _clock;
     private int _reloadGeneration;
 
-    public CalendarViewModel(ICalendarService calendar, Func<Account?> account)
+    public CalendarViewModel(ICalendarService calendar, Func<Account?> account, Func<int?>? defaultReminder = null)
     {
         _calendar = calendar;
         _account = account;
+        _defaultReminder = defaultReminder ?? (() => 15);
         // Moves the "now" line and rolls "today" over at midnight.
         _clock = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
         _clock.Tick += (_, _) => UpdateNowLine();
@@ -312,7 +314,7 @@ public partial class CalendarViewModel : ObservableObject
     {
         if (_account() is not { } account) return;
         var editor = new AppointmentEditorViewModel(_calendar, account, null, null);
-        editor.Initialize(start, allDay);
+        editor.Initialize(start, allDay, _defaultReminder());
         Open(editor);
     }
 

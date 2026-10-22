@@ -62,6 +62,19 @@ public class ReplyBuilderTests
         Assert.Equal("root@x orig@x", seed.References);
     }
 
+    [Fact]
+    public void Signature_goes_alone_in_new_mail_and_above_the_quote_in_replies()
+    {
+        var fresh = ReplyBuilder.Create(ComposeMode.New, null, "", "me@x.test", "Iqbal\nNetcom  \n");
+        Assert.Equal("\n\nIqbal\nNetcom", fresh.Body);
+
+        var reply = ReplyBuilder.Create(ComposeMode.Reply, Original(), "Original text", "me@x.test", "Iqbal");
+        Assert.StartsWith("\n\nIqbal\n\n" + ReplyBuilder.Separator, reply.Body);
+        Assert.EndsWith("Original text", reply.Body);
+
+        Assert.Equal("", ReplyBuilder.Create(ComposeMode.New, null, "", "me@x.test", "   ").Body);
+    }
+
     [Theory]
     [InlineData("RE:", "Re: Budget", "Re: Budget")]
     [InlineData("RE:", "Budget", "RE: Budget")]

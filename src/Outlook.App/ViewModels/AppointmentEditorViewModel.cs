@@ -76,8 +76,9 @@ public partial class AppointmentEditorViewModel : ObservableObject
     private TimeSpan _length = TimeSpan.FromMinutes(30);
     private bool _syncingEnd;
 
-    public void Initialize(DateTime start, bool allDay)
+    public void Initialize(DateTime start, bool allDay, int? reminderMinutes = 15)
     {
+        Reminder = ReminderOptions.FirstOrDefault(r => r.Minutes == reminderMinutes) ?? ReminderOptions[3];
         IsAllDay = allDay;
         StartDate = start.Date;
         StartTime = start.TimeOfDay;

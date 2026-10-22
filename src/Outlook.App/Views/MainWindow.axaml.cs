@@ -62,6 +62,7 @@ public partial class MainWindow : Window
         vm.ComposeRequested += compose => new ComposeWindow { DataContext = compose }.Show(this);
         vm.Confirm = ConfirmAsync;
         vm.Reminders.ShowRequested += ShowReminders;
+        vm.SettingsRequested += settings => new SettingsWindow { DataContext = settings }.ShowDialog(this);
     }
 
     private bool _closeAfterFlush;

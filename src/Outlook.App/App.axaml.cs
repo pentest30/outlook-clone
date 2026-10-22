@@ -18,12 +18,25 @@ public partial class App : Application
 
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
+    /// <summary>"Light", "Dark", or anything else to follow the operating system.</summary>
+    public static void ApplyTheme(string theme)
+    {
+        if (Current is null) return;
+        Current.RequestedThemeVariant = theme switch
+        {
+            "Light" => Avalonia.Styling.ThemeVariant.Light,
+            "Dark" => Avalonia.Styling.ThemeVariant.Dark,
+            _ => Avalonia.Styling.ThemeVariant.Default,
+        };
+    }
+
     public override void OnFrameworkInitializationCompleted()
     {
         _services = ConfigureServices();
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            ApplyTheme(_services.GetRequiredService<AppSettings>().Theme);
             var vm = _services.GetRequiredService<MainWindowViewModel>();
             desktop.MainWindow = new MainWindow { DataContext = vm };
 

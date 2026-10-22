@@ -31,17 +31,19 @@ public static class ReplyBuilder
 {
     public const string Separator = "________________________________";
 
-    public static ComposeSeed Create(ComposeMode mode, MailMessage? original, string originalBody, string myAddress)
+    /// <param name="signature">Added under the cursor position: alone in new mail, above the quoted original in replies.</param>
+    public static ComposeSeed Create(ComposeMode mode, MailMessage? original, string originalBody, string myAddress, string signature = "")
     {
+        var signed = string.IsNullOrWhiteSpace(signature) ? "" : "\n\n" + signature.TrimEnd();
         if (original is null || mode == ComposeMode.New)
-            return new ComposeSeed("", "", "", "", null, null);
+            return new ComposeSeed("", "", "", signed, null, null);
 
         if (mode == ComposeMode.EditDraft)
             return new ComposeSeed(original.To, original.Cc, original.Subject, originalBody, original.InReplyTo, original.References);
 
         var me = myAddress.ToLowerInvariant();
         var references = JoinReferences(original.References, original.MessageIdHeader);
-        var quoted = "\n\n" + QuoteHeader(original) + originalBody;
+        var quoted = signed + "\n\n" + QuoteHeader(original) + originalBody;
 
         switch (mode)
         {

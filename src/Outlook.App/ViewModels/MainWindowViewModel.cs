@@ -38,7 +38,8 @@ public partial class MainWindowViewModel : ObservableObject
         _mail = mail;
         _store = store;
         _calendar = calendar;
-        Calendar = new CalendarViewModel(calendar, () => _account);
+        Calendar = new CalendarViewModel(calendar, () => _account, () => settings.DefaultReminderMinutes);
+        settings.Changed += OnSettingsChanged;
         Reminders = new RemindersViewModel(calendar, () => _account);
         Reminders.OpenRequested += o => _ = Calendar.OpenAsync(o);
         _settings = settings;
@@ -51,6 +52,24 @@ public partial class MainWindowViewModel : ObservableObject
         _mail.FolderChanged += (_, e) => Dispatcher.UIThread.Post(() => _ = OnServerFolderChangedAsync(e));
         _ = InitializeAsync();
     }
+
+    /// <summary>Raised to open the Settings window.</summary>
+    public event Action<SettingsViewModel>? SettingsRequested;
+
+    [RelayCommand]
+    private void OpenSettings() => SettingsRequested?.Invoke(new SettingsViewModel(_settings, _account?.Email ?? ""));
+
+    private void OnSettingsChanged()
+    {
+        App.ApplyTheme(_settings.Theme);
+        ShowAsConversations = _settings.ShowAsConversations;
+    }
+
+    /// <summary>The signature to start a message with, per the Settings window.</summary>
+    private string SignatureFor(ComposeMode mode) =>
+        _account is null || mode == ComposeMode.EditDraft || (mode != ComposeMode.New && !_settings.SignatureOnReplies)
+            ? ""
+            : _settings.SignatureFor(_account.Email);
 
     /// <summary>Raised to open a compose window; the view owns windows.</summary>
     public event Action<ComposeViewModel>? ComposeRequested;
@@ -515,7 +534,7 @@ public partial class MainWindowViewModel : ObservableObject
         }
 
         // Outlook's default: opening a message (or conversation) in the reading pane marks it read.
-        if (!item.IsRead && !item.Model.IsDraft)
+        if (_settings.MarkReadWhenOpened && !item.IsRead && !item.Model.IsDraft)
             await SetReadAsync([item], true);
     }
 
@@ -744,7 +763,7 @@ public partial class MainWindowViewModel : ObservableObject
     public void ComposeTo(string address)
     {
         if (_account is null) return;
-        var seed = new ComposeSeed(address, "", "", "", null, null);
+        var seed = ReplyBuilder.Create(ComposeMode.New, null, "", _account.Email, SignatureFor(ComposeMode.New)) with { To = address };
         OpenCompose(new ComposeViewModel(_mail, _account, ComposeMode.New, null, seed, [], null));
     }
 
@@ -780,7 +799,7 @@ public partial class MainWindowViewModel : ObservableObject
             }
         }
 
-        var seed = ReplyBuilder.Create(mode, original, body, _account.Email);
+        var seed = ReplyBuilder.Create(mode, original, body, _account.Email, SignatureFor(mode));
         var draftId = mode == ComposeMode.EditDraft ? original?.MessageIdHeader : null;
         OpenCompose(new ComposeViewModel(_mail, _account, mode, original, seed, attachments, draftId));
     }
