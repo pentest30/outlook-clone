@@ -174,6 +174,40 @@ namespace Outlook.Data.Migrations
                     b.ToTable("Categories");
                 });
 
+            modelBuilder.Entity("Outlook.Core.Models.KnownAddress", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("AccountId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("LastUsedUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ReceivedCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SentCount")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId", "Address")
+                        .IsUnique();
+
+                    b.ToTable("KnownAddresses");
+                });
+
             modelBuilder.Entity("Outlook.Core.Models.MailAttachment", b =>
                 {
                     b.Property<int>("Id")
@@ -375,6 +409,15 @@ namespace Outlook.Data.Migrations
                 });
 
             modelBuilder.Entity("Outlook.Core.Models.Category", b =>
+                {
+                    b.HasOne("Outlook.Core.Models.Account", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Outlook.Core.Models.KnownAddress", b =>
                 {
                     b.HasOne("Outlook.Core.Models.Account", null)
                         .WithMany()

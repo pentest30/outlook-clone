@@ -174,6 +174,42 @@ public class MailStore(Func<MailDbContext> createContext) : IMailStore
         return category;
     }
 
+    public async Task<IReadOnlyList<KnownAddress>> SuggestAddressesAsync(int accountId, string prefix, int take = 8, CancellationToken ct = default)
+    {
+        prefix = prefix.Trim().Trim('"', '<').ToLowerInvariant();
+        if (prefix.Length == 0) return [];
+        await using var db = CreateContext();
+        // Matches the start of the address or of any word of the name ("lop" finds Ana Lopez).
+        var matches = await db.KnownAddresses.AsNoTracking()
+            .Where(a => a.AccountId == accountId
+                        && (a.Address.StartsWith(prefix) || a.Name.ToLower().StartsWith(prefix) || a.Name.ToLower().Contains(" " + prefix)))
+            .ToListAsync(ct);
+        // People you write to rank far above people who only write to you; recency breaks ties.
+        return matches
+            .OrderByDescending(a => a.SentCount * 5 + a.ReceivedCount)
+            .ThenByDescending(a => a.LastUsedUtc)
+            .Take(take)
+            .ToList();
+    }
+
+    public async Task BuildAddressBookAsync(Account account, CancellationToken ct = default)
+    {
+        await using var db = CreateContext();
+        if (await db.KnownAddresses.AnyAsync(a => a.AccountId == account.Id, ct)) return;
+
+        var rows = await db.Messages.AsNoTracking()
+            .Where(m => m.Folder!.AccountId == account.Id)
+            .Select(m => new { m.FromName, m.FromAddress, m.To, m.Cc, m.Date, Sent = m.Folder!.Special == SpecialFolder.Sent })
+            .ToListAsync(ct);
+        var book = new AddressBook(db, account);
+        foreach (var r in rows)
+        {
+            if (r.Sent) book.Record(AddressBook.People(r.To, r.Cc), sent: true, r.Date);
+            else book.Record([(r.FromName, r.FromAddress)], sent: false, r.Date);
+        }
+        await book.SaveAsync(ct);
+    }
+
     public async Task<IReadOnlyList<MailAttachment>> GetAttachmentsAsync(int messageId, CancellationToken ct = default)
     {
         await using var db = CreateContext();

@@ -23,6 +23,12 @@ public interface IMailStore
     Task<IReadOnlyList<Category>> GetCategoriesAsync(int accountId, CancellationToken ct = default);
     Task<Category> AddCategoryAsync(int accountId, string name, string color, CancellationToken ct = default);
 
+    /// <summary>People matching what is being typed (address, first or last name), most used first.</summary>
+    Task<IReadOnlyList<KnownAddress>> SuggestAddressesAsync(int accountId, string prefix, int take = 8, CancellationToken ct = default);
+
+    /// <summary>Fills the address book from cached mail the first time (later updates come with sync and send).</summary>
+    Task BuildAddressBookAsync(Account account, CancellationToken ct = default);
+
     /// <summary>Attachment metadata only; <see cref="MailAttachment.Data"/> is left empty.</summary>
     Task<IReadOnlyList<MailAttachment>> GetAttachmentsAsync(int messageId, CancellationToken ct = default);
     Task<byte[]> GetAttachmentDataAsync(int attachmentId, CancellationToken ct = default);

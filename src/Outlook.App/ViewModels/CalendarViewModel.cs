@@ -104,6 +104,9 @@ public partial class CalendarViewModel : ObservableObject
         _clock.Start();
     }
 
+    /// <summary>Address suggestions for the recipient fields (set by the main window).</summary>
+    public Func<string, CancellationToken, Task<IEnumerable<object>>>? SuggestRecipients { get; set; }
+
     /// <summary>Raised to open the appointment editor; the view owns windows.</summary>
     public event Action<AppointmentEditorViewModel>? EditorRequested;
 
@@ -332,6 +335,7 @@ public partial class CalendarViewModel : ObservableObject
 
     private void Open(AppointmentEditorViewModel editor)
     {
+        editor.SuggestRecipients = SuggestRecipients;
         editor.Saved += message => Dispatcher.UIThread.Post(() =>
         {
             Status = message ?? "";

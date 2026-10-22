@@ -166,10 +166,19 @@ public sealed class ImapMailService(Func<MailDbContext> createContext, ICredenti
         var fresh = serverUids.Where(u => !cached.ContainsKey(u.Id)).OrderByDescending(u => u.Id).ToList();
         if (cached.Count == 0 && fresh.Count > InitialSyncLimit)
             fresh = fresh.Take(InitialSyncLimit).ToList();
+        // New mail feeds the auto-complete list: who wrote to us, and whom we wrote to (Sent).
+        var account = fresh.Count > 0 ? await db.Accounts.SingleAsync(a => a.Id == folder.AccountId, ct) : null;
+        var book = account is null ? null : new AddressBook(db, account);
+        var isSent = folder.Special == SpecialFolder.Sent;
         foreach (var batch in fresh.Chunk(FetchBatchSize))
         {
             foreach (var s in await remote.FetchAsync(batch, new FetchRequest(HeaderItems), ct))
-                db.Messages.Add(ToMessage(folder.Id, s));
+            {
+                var message = ToMessage(folder.Id, s);
+                db.Messages.Add(message);
+                book?.Record(isSent ? AddressBook.People(message.To, message.Cc) : [(message.FromName, message.FromAddress)],
+                    sent: isSent, message.Date);
+            }
         }
 
         folder.LastSyncedAt = DateTimeOffset.UtcNow;
@@ -657,6 +666,7 @@ public sealed class ImapMailService(Func<MailDbContext> createContext, ICredenti
             if (!string.IsNullOrEmpty(account.UserName) && smtp.Capabilities.HasFlag(SmtpCapabilities.Authentication))
                 await smtp.AuthenticateAsync(account.UserName, PasswordFor(account), ct);
             await smtp.SendAsync(mime, ct);
+            await RememberRecipientsAsync(account, mime, ct);
             try { await smtp.DisconnectAsync(true, ct); }
             catch (Exception) { /* already delivered; a failed QUIT changes nothing */ }
         }
@@ -678,6 +688,23 @@ public sealed class ImapMailService(Func<MailDbContext> createContext, ICredenti
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return new SendReport(SavedToSent: false, Problem: $"Message sent, but a copy couldn't be saved to Sent: {ex.Message}");
+        }
+    }
+
+    /// <summary>Everyone just written to goes to the top of the auto-complete list.</summary>
+    private async Task RememberRecipientsAsync(Account account, MimeMessage mime, CancellationToken ct)
+    {
+        try
+        {
+            await using var db = createContext();
+            var book = new AddressBook(db, account);
+            book.Record(mime.To.Mailboxes.Concat(mime.Cc.Mailboxes).Concat(mime.Bcc.Mailboxes).Select(m => (m.Name ?? "", m.Address)),
+                sent: true, DateTimeOffset.UtcNow);
+            await book.SaveAsync(ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Suggestions are a convenience; the message is already on its way.
         }
     }
 

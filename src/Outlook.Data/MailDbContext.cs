@@ -12,6 +12,7 @@ public class MailDbContext(DbContextOptions<MailDbContext> options) : DbContext(
     public DbSet<MailAttachment> Attachments => Set<MailAttachment>();
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
+    public DbSet<KnownAddress> KnownAddresses => Set<KnownAddress>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -60,6 +61,14 @@ public class MailDbContext(DbContextOptions<MailDbContext> options) : DbContext(
             e.Property(a => a.RemindersDismissedThroughUtc).HasConversion(nullableUtcTicks);
             e.Property(a => a.LastModifiedUtc).HasConversion(utcTicks);
             e.Ignore(a => a.IsMeeting);
+            e.HasOne<Account>().WithMany().HasForeignKey(a => a.AccountId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<KnownAddress>(e =>
+        {
+            e.HasIndex(a => new { a.AccountId, a.Address }).IsUnique();
+            e.Property(a => a.LastUsedUtc).HasConversion(utcTicks);
+            e.Ignore(a => a.Display);
             e.HasOne<Account>().WithMany().HasForeignKey(a => a.AccountId).OnDelete(DeleteBehavior.Cascade);
         });
 

@@ -60,6 +60,9 @@ public partial class ComposeViewModel : ObservableObject
     public event Action<string?>? Completed;
     public event Action? CloseRequested;
 
+    /// <summary>Address suggestions for the recipient fields (set by the main window).</summary>
+    public Func<string, CancellationToken, Task<IEnumerable<object>>>? SuggestRecipients { get; set; }
+
     public string MessageId { get; }
     public string From => $"{_account.DisplayName} <{_account.Email}>";
     public ObservableCollection<AttachmentViewModel> Attachments { get; } = [];

@@ -183,6 +183,15 @@ public partial class MainWindowViewModel : ObservableObject
         NewMailCommand.NotifyCanExecuteChanged();
         await LoadCategoriesAsync();
         await ReloadFoldersAsync();   // show the cache immediately, then refresh from the server
+        Calendar.SuggestRecipients = SuggestRecipients;
+        try
+        {
+            await _store.BuildAddressBookAsync(account);   // first run after upgrading: learn from cached mail
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Couldn't build address suggestions: {ex.Message}";
+        }
         Reminders.Start();
         _syncTimer.Start();
         await SyncAsync();
@@ -804,8 +813,20 @@ public partial class MainWindowViewModel : ObservableObject
         OpenCompose(new ComposeViewModel(_mail, _account, mode, original, seed, attachments, draftId));
     }
 
+    /// <summary>Suggestions for the entry being typed, skipping people already on the line.</summary>
+    private async Task<IEnumerable<object>> SuggestRecipients(string? line, CancellationToken ct)
+    {
+        if (_account is null) return [];
+        var typed = AddressList.LastEntry(line);
+        if (typed.Length == 0) return [];
+        var already = AddressList.Split(line).Select(AddressList.AddressOf).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var found = await _store.SuggestAddressesAsync(_account.Id, typed, 8, ct);
+        return found.Where(a => !already.Contains(a.Address)).Select(a => (object)a.Display).ToList();
+    }
+
     private void OpenCompose(ComposeViewModel compose)
     {
+        compose.SuggestRecipients = SuggestRecipients;
         compose.Completed += problem => Dispatcher.UIThread.Post(() =>
         {
             if (problem is not null)

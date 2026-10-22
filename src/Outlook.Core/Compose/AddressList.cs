@@ -53,6 +53,32 @@ public static class AddressList
 
     public static string Join(IEnumerable<string> entries) => string.Join("; ", entries);
 
+    /// <summary>"Ana Lopez &lt;ana@x&gt;" gives ("Ana Lopez", "ana@x"); a bare address has no name.</summary>
+    public static (string Name, string Address) Parse(string entry)
+    {
+        var address = AddressOf(entry);
+        var open = entry.LastIndexOf('<');
+        var name = open > 0 ? entry[..open].Trim().Trim('"').Trim() : "";
+        return (name, address);
+    }
+
+    /// <summary>The text being typed after the last separator, for address suggestions.</summary>
+    public static string LastEntry(string? line)
+    {
+        if (string.IsNullOrEmpty(line)) return "";
+        var cut = line.LastIndexOfAny([';', ',']);
+        return line[(cut + 1)..].TrimStart();
+    }
+
+    /// <summary>The line with its last (partial) entry replaced by a completed one, ready for the next.</summary>
+    public static string CompleteLast(string? line, string completed)
+    {
+        line ??= "";
+        var cut = line.LastIndexOfAny([';', ',']);
+        var head = cut < 0 ? "" : line[..(cut + 1)].TrimEnd() + " ";
+        return head + completed + "; ";
+    }
+
     /// <summary>"me@contoso.com" gives "contoso.com"; used to build Message-IDs.</summary>
     public static string DomainOf(string email)
     {

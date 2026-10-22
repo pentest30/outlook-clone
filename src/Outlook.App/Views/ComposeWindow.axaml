@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Outlook.App.ViewModels"
+        xmlns:controls="using:Outlook.App.Controls"
         x:Class="Outlook.App.Views.ComposeWindow"
         x:DataType="vm:ComposeViewModel"
         Title="{Binding Title}"
@@ -50,15 +51,21 @@
       <TextBlock Grid.Column="2" Text="{Binding From}" VerticalAlignment="Center" Margin="0,6" />
 
       <TextBlock Grid.Row="1" Grid.Column="1" Text="To" VerticalAlignment="Center" Margin="0,0,12,0" Classes="muted" />
-      <TextBox Grid.Row="1" Grid.Column="2" x:Name="ToBox" Text="{Binding To}" Margin="0,2"
-               Watermark="Separate addresses with ; or ," />
+      <AutoCompleteBox Grid.Row="1" Grid.Column="2" x:Name="ToBox" Text="{Binding To, Mode=TwoWay}" Margin="0,2"
+                       Watermark="Separate addresses with ; or ,"
+                       FilterMode="None" MinimumPrefixLength="1" MinimumPopulateDelay="0:0:0.15"
+                       AsyncPopulator="{Binding SuggestRecipients}" TextSelector="{x:Static controls:RecipientCompletion.Selector}" />
 
       <TextBlock Grid.Row="2" Grid.Column="1" Text="Cc" VerticalAlignment="Center" Margin="0,0,12,0" Classes="muted" />
-      <TextBox Grid.Row="2" Grid.Column="2" Text="{Binding Cc}" Margin="0,2" />
+      <AutoCompleteBox Grid.Row="2" Grid.Column="2" Text="{Binding Cc, Mode=TwoWay}" Margin="0,2"
+                       FilterMode="None" MinimumPrefixLength="1" MinimumPopulateDelay="0:0:0.15"
+                       AsyncPopulator="{Binding SuggestRecipients}" TextSelector="{x:Static controls:RecipientCompletion.Selector}" />
 
       <TextBlock Grid.Row="3" Grid.Column="1" Text="Bcc" VerticalAlignment="Center" Margin="0,0,12,0" Classes="muted"
                  IsVisible="{Binding ShowBcc}" />
-      <TextBox Grid.Row="3" Grid.Column="2" Text="{Binding Bcc}" Margin="0,2" IsVisible="{Binding ShowBcc}" />
+      <AutoCompleteBox Grid.Row="3" Grid.Column="2" Text="{Binding Bcc, Mode=TwoWay}" Margin="0,2" IsVisible="{Binding ShowBcc}"
+                       FilterMode="None" MinimumPrefixLength="1" MinimumPopulateDelay="0:0:0.15"
+                       AsyncPopulator="{Binding SuggestRecipients}" TextSelector="{x:Static controls:RecipientCompletion.Selector}" />
 
       <TextBlock Grid.Row="4" Grid.Column="1" Text="Subject" VerticalAlignment="Center" Margin="0,0,12,0" Classes="muted" />
       <TextBox Grid.Row="4" Grid.Column="2" Text="{Binding Subject}" Margin="0,2" />

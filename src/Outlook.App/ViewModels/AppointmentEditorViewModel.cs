@@ -39,6 +39,9 @@ public partial class AppointmentEditorViewModel : ObservableObject
         new(60, "1 hour"), new(120, "2 hours"), new(1440, "1 day"), new(10080, "1 week"),
     ];
 
+    /// <summary>Address suggestions for the recipient fields (set by the main window).</summary>
+    public Func<string, CancellationToken, Task<IEnumerable<object>>>? SuggestRecipients { get; set; }
+
     public bool IsNew => _existing is null;
     /// <summary>Invitations from other people are read-only here; answer them from the e-mail.</summary>
     public bool CanEdit => _existing is null || _existing.IsOrganizer;

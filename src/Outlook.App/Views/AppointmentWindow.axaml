@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Outlook.App.ViewModels"
+        xmlns:controls="using:Outlook.App.Controls"
         x:Class="Outlook.App.Views.AppointmentWindow"
         x:DataType="vm:AppointmentEditorViewModel"
         Title="{Binding WindowTitle}"
@@ -36,8 +37,10 @@
       <TextBox Grid.Row="1" Grid.Column="1" x:Name="TitleBox" Text="{Binding Subject}" Watermark="Add a title" Margin="0,3" />
 
       <TextBlock Grid.Row="2" Text="Attendees" VerticalAlignment="Center" Margin="0,0,12,0" Classes="muted" />
-      <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Attendees}" Margin="0,3"
-               Watermark="Invite people: addresses separated by ; or , (makes this a meeting)" />
+      <AutoCompleteBox Grid.Row="2" Grid.Column="1" Text="{Binding Attendees, Mode=TwoWay}" Margin="0,3"
+                       Watermark="Invite people: addresses separated by ; or , (makes this a meeting)"
+                       FilterMode="None" MinimumPrefixLength="1" MinimumPopulateDelay="0:0:0.15"
+                       AsyncPopulator="{Binding SuggestRecipients}" TextSelector="{x:Static controls:RecipientCompletion.Selector}" />
 
       <TextBlock Grid.Row="3" Text="Start" VerticalAlignment="Center" Margin="0,0,12,0" Classes="muted" />
       <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="0,3">
