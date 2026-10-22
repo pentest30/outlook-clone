@@ -36,6 +36,18 @@ public class EmailHtmlTests
     }
 
     [Theory]
+    [InlineData("<td style=\"background: #0F6CBD; color: white\">", "<td style=\"background: #0F6CBD; background-color: #0F6CBD; color: white\">")]
+    [InlineData("<td style=\"background:white\">", "<td style=\"background:white; background-color: white\">")]
+    [InlineData("<style>.h { background: rgb(1, 2, 3) url(x.png) no-repeat; }</style>",
+                "<style>.h { background: rgb(1, 2, 3) url(x.png) no-repeat; background-color: rgb(1, 2, 3); }</style>")]
+    [InlineData("<td style=\"background-color: red\">", "<td style=\"background-color: red\">")]
+    [InlineData("<td style=\"background: none\">", "<td style=\"background: none\">")]
+    public void Background_shorthand_colours_are_spelled_out(string html, string expected)
+    {
+        Assert.Equal(expected, EmailHtml.Sanitize(html));
+    }
+
+    [Theory]
     [InlineData("<img src=\"https://track.example/p.gif\">", true)]
     [InlineData("<div style=\"background: url('http://x/y.png')\">", true)]
     [InlineData("<link rel=stylesheet href=https://x/s.css>", true)]

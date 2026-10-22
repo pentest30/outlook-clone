@@ -47,7 +47,7 @@ internal sealed class FakeMail : IMailService
 public sealed class AccountSetupTests : IDisposable
 {
     private static readonly DiscoveredSettings Ovh = new("ssl0.ovh.net", 993, TransportSecurity.SslOnConnect,
-        "ssl0.ovh.net", 465, TransportSecurity.SslOnConnect, "i.baouche@netcom-group.co", "OVH", false);
+        "ssl0.ovh.net", 465, TransportSecurity.SslOnConnect, "sam.taylor@example.com", "OVH", false);
 
     private readonly string _dbPath = Path.Combine(Path.GetTempPath(), $"outlook-setup-{Guid.NewGuid():N}.db");
     private readonly MailStore _store;
@@ -72,7 +72,7 @@ public sealed class AccountSetupTests : IDisposable
     public async Task Address_and_password_are_enough_when_servers_are_found()
     {
         var vm = Setup(found: Ovh);
-        vm.Email = "i.baouche@netcom-group.co";
+        vm.Email = "sam.taylor@example.com";
         vm.Password = "secret";
         await vm.DiscoverAsync();
 
@@ -86,7 +86,7 @@ public sealed class AccountSetupTests : IDisposable
         Assert.Null(vm.Error);
         var (account, isNew) = Assert.Single(_saved);
         Assert.True(isNew);
-        Assert.Equal("i.baouche@netcom-group.co", account.UserName);
+        Assert.Equal("sam.taylor@example.com", account.UserName);
         Assert.Equal("secret", _credentials.Load(account.Id));
         Assert.Equal("", vm.Password);   // not kept in memory after saving
     }
@@ -106,7 +106,7 @@ public sealed class AccountSetupTests : IDisposable
     public async Task A_wrong_password_or_smtp_setting_saves_nothing()
     {
         var vm = Setup(found: Ovh);
-        vm.Email = "i.baouche@netcom-group.co";
+        vm.Email = "sam.taylor@example.com";
         vm.Password = "wrong";
         await vm.DiscoverAsync();
         _mail.ImapAccepts = (_, p) => p == "right";
@@ -164,8 +164,8 @@ public sealed class AccountSetupTests : IDisposable
         var vm = Setup(found: Ovh);
         var window = new AccountSetupWindow { DataContext = vm };
         window.Show();
-        vm.DisplayName = "Iqbal Baouche";
-        vm.Email = "i.baouche@netcom-group.co";
+        vm.DisplayName = "Sam Taylor";
+        vm.Email = "sam.taylor@example.com";
         await vm.DiscoverAsync();
         Dispatcher.UIThread.RunJobs();
         AvaloniaHeadlessPlatform.ForceRenderTimerTick();

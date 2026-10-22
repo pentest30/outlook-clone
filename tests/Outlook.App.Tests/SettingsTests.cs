@@ -24,7 +24,7 @@ public class SettingsTests
         var vm = new SettingsViewModel(settings, "me@x.test")
         {
             Theme = "Dark",
-            Signature = "Iqbal Baouche\nNetcom Group\n\n",
+            Signature = "Sam Taylor\nExample Corp\n\n",
             UndoSendSeconds = 8,
             MarkReadWhenOpened = false,
             DefaultReminder = SettingsViewModel.ReminderOptions.First(r => r.Minutes == 30),
@@ -35,7 +35,7 @@ public class SettingsTests
         Assert.Equal(1, changed);
         var reloaded = AppSettings.Load(path);
         Assert.Equal("Dark", reloaded.Theme);
-        Assert.Equal("Iqbal Baouche\nNetcom Group", reloaded.SignatureFor("ME@x.test"));   // trimmed; address case ignored
+        Assert.Equal("Sam Taylor\nExample Corp", reloaded.SignatureFor("ME@x.test"));   // trimmed; address case ignored
         Assert.Equal(8, reloaded.UndoSendSeconds);
         Assert.False(reloaded.MarkReadWhenOpened);
         Assert.Equal(30, reloaded.DefaultReminderMinutes);
@@ -64,7 +64,7 @@ public class SettingsTests
     public void Window_renders_every_tab()
     {
         var settings = Fresh(out _);
-        settings.Signatures["me@x.test"] = "Iqbal Baouche\nNetcom Group";
+        settings.Signatures["me@x.test"] = "Sam Taylor\nExample Corp";
         var window = new SettingsWindow { DataContext = new SettingsViewModel(settings, "me@x.test") };
         window.Show();
         var tabs = window.FindControl<TabControl>("Tabs")!;

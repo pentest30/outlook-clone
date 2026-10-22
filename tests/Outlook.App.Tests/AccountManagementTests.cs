@@ -106,7 +106,7 @@ public sealed class AccountManagementTests : IDisposable
     public async Task Accounts_page_renders()
     {
         await Add("dev@localhost");
-        await Add("i.baouche@netcom-group.co");
+        await Add("sam.taylor@example.com");
         var vm = Start();
         var window = new SettingsWindow { DataContext = new SettingsViewModel(_settings, vm.AccountEmail, vm) };
         window.Show();

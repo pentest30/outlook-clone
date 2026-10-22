@@ -36,11 +36,11 @@ public class ServerDiscoveryTests
     [Fact]
     public void Reads_imap_and_smtp_and_skips_pop()
     {
-        var s = ServerDiscovery.Parse(OvhXml, "i.baouche@netcom-group.co", "ovh.net")!;
+        var s = ServerDiscovery.Parse(OvhXml, "sam@example-company.fr", "ovh.net")!;
 
         Assert.Equal(("ssl0.ovh.net", 993, TransportSecurity.SslOnConnect), (s.ImapHost, s.ImapPort, s.ImapSecurity));
         Assert.Equal(("ssl0.ovh.net", 465, TransportSecurity.SslOnConnect), (s.SmtpHost, s.SmtpPort, s.SmtpSecurity));
-        Assert.Equal("i.baouche@netcom-group.co", s.UserName);
+        Assert.Equal("sam@example-company.fr", s.UserName);
         Assert.Equal("OVH", s.Provider);
         Assert.False(s.NeedsOAuth);
     }
@@ -87,12 +87,12 @@ public class ServerDiscoveryTests
     {
         var ispdb = new FakeIspdb(new() { ["ovh.net"] = OvhXml });
         var discovery = new ServerDiscovery(new HttpClient(ispdb),
-            (domain, _) => Task.FromResult<IReadOnlyList<string>>(domain == "netcom-group.co" ? ["mx1.mail.ovh.net", "mx2.mail.ovh.net"] : []));
+            (domain, _) => Task.FromResult<IReadOnlyList<string>>(domain == "example-company.fr" ? ["mx1.mail.ovh.net", "mx2.mail.ovh.net"] : []));
 
-        var s = await discovery.DiscoverAsync("i.baouche@netcom-group.co");
+        var s = await discovery.DiscoverAsync("sam@example-company.fr");
 
         Assert.Equal("ssl0.ovh.net", s?.ImapHost);
-        Assert.Equal(["netcom-group.co", "mail.ovh.net", "ovh.net"], ispdb.Asked);   // the domain first, then the provider
+        Assert.Equal(["example-company.fr", "mail.ovh.net", "ovh.net"], ispdb.Asked);   // the domain first, then the provider
     }
 
     [Fact]

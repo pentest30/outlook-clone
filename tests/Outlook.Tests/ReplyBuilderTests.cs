@@ -65,11 +65,11 @@ public class ReplyBuilderTests
     [Fact]
     public void Signature_goes_alone_in_new_mail_and_above_the_quote_in_replies()
     {
-        var fresh = ReplyBuilder.Create(ComposeMode.New, null, "", "me@x.test", "Iqbal\nNetcom  \n");
-        Assert.Equal("\n\nIqbal\nNetcom", fresh.Body);
+        var fresh = ReplyBuilder.Create(ComposeMode.New, null, "", "me@x.test", "Sam\nExample  \n");
+        Assert.Equal("\n\nSam\nExample", fresh.Body);
 
-        var reply = ReplyBuilder.Create(ComposeMode.Reply, Original(), "Original text", "me@x.test", "Iqbal");
-        Assert.StartsWith("\n\nIqbal\n\n" + ReplyBuilder.Separator, reply.Body);
+        var reply = ReplyBuilder.Create(ComposeMode.Reply, Original(), "Original text", "me@x.test", "Sam");
+        Assert.StartsWith("\n\nSam\n\n" + ReplyBuilder.Separator, reply.Body);
         Assert.EndsWith("Original text", reply.Body);
 
         Assert.Equal("", ReplyBuilder.Create(ComposeMode.New, null, "", "me@x.test", "   ").Body);

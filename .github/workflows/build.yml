@@ -1,0 +1,114 @@
+# Build, test and package Outlook Clone.
+#
+#   every push / pull request : build + all tests (Windows), IMAP/SMTP sync tests against GreenMail (Linux),
+#                               then the Windows installer as a downloadable artifact
+#   a tag like v0.6.0         : the same, plus a GitHub Release with the installer attached
+name: Build
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  build-test:
+    name: Build and test (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet restore
+      - run: dotnet build --no-restore -c Release
+      # GreenMail tests skip here (no Linux containers on Windows runners); the next job runs them.
+      - run: dotnet test --no-build -c Release --logger "trx" --results-directory TestResults
+        env:
+          # The UI tests write their screenshots under the temp folder; keep it where the next step looks.
+          TMP: ${{ runner.temp }}
+          TEMP: ${{ runner.temp }}
+      - name: UI screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-screenshots
+          path: ${{ runner.temp }}/outlook-ui-shots
+          if-no-files-found: ignore
+
+  imap-sync:
+    name: IMAP/SMTP sync tests (GreenMail)
+    runs-on: ubuntu-latest
+    services:
+      greenmail:
+        image: greenmail/standalone:2.1.14
+        env:
+          GREENMAIL_OPTS: >-
+            -Dgreenmail.setup.test.smtp -Dgreenmail.setup.test.imap
+            -Dgreenmail.hostname=0.0.0.0 -Dgreenmail.auth.disabled
+        ports:
+          - 3025:3025
+          - 3143:3143
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Wait for GreenMail
+        run: |
+          for i in $(seq 1 60); do
+            (echo > /dev/tcp/localhost/3143) 2>/dev/null && (echo > /dev/tcp/localhost/3025) 2>/dev/null && exit 0
+            sleep 1
+          done
+          echo "GreenMail did not start" && exit 1
+      - name: Sync tests
+        env:
+          GREENMAIL: "1"
+        run: dotnet test tests/Outlook.Tests -c Release --filter "FullyQualifiedName~ImapSyncTests"
+
+  installer:
+    name: Windows installer
+    needs: [build-test, imap-sync]
+    runs-on: windows-latest
+    permissions:
+      contents: write   # to create the GitHub Release on tags
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Version
+        id: version
+        shell: pwsh
+        run: |
+          if ("${{ github.ref_type }}" -eq "tag") {
+            $version = "${{ github.ref_name }}".TrimStart("v")
+          } else {
+            # Not a release: the project version plus the run number, e.g. 0.5.1-ci.42
+            $base = ([xml](Get-Content src/Outlook.App/Outlook.App.csproj)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
+            $version = "$base-ci.${{ github.run_number }}"
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+      - name: Package
+        shell: pwsh
+        run: ./build/package.ps1 -Version ${{ steps.version.outputs.version }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OutlookClone-${{ steps.version.outputs.version }}-installer
+          path: releases/*Setup.exe
+          if-no-files-found: error
+      - name: GitHub Release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Outlook Clone ${{ steps.version.outputs.version }}
+          generate_release_notes: true
+          files: releases/*
