@@ -110,7 +110,13 @@
                       Margin="8,0,0,0" ToolTip.Tip="Search every folder, or only the one that is open" />
           </Grid>
           <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6">
-            <TextBlock Text="{Binding AccountEmail}" Foreground="White" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="180" />
+            <Button x:Name="AccountButton" Click="OnAccountButtonClick" Background="Transparent" BorderThickness="0" Padding="6,2"
+                    ToolTip.Tip="Switch, add or manage accounts">
+              <StackPanel Orientation="Horizontal" Spacing="4">
+                <TextBlock Text="{Binding AccountEmail}" Foreground="White" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="200" />
+                <TextBlock Text="▾" Foreground="White" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
             <Button Content="⚙" Command="{Binding OpenSettingsCommand}" Foreground="White" Background="Transparent"
                     BorderThickness="0" FontSize="16" ToolTip.Tip="Settings (Ctrl+,)" />
           </StackPanel>
@@ -420,7 +426,7 @@
 
     <!-- First-run account setup -->
     <Border IsVisible="{Binding IsAccountSetupVisible}" Background="#99000000">
-      <views:AccountSetupView DataContext="{Binding AccountSetup}" />
+      <views:AccountSetupView DataContext="{Binding AccountSetup}" IsVisible="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).AccountSetup, Converter={x:Static ObjectConverters.IsNotNull}}" />
     </Border>
   </Panel>
 

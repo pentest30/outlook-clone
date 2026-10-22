@@ -45,6 +45,22 @@ public sealed class ImapMailService(Func<MailDbContext> createContext, ICredenti
 
     public event EventHandler<FolderChangedEventArgs>? FolderChanged;
 
+    public async Task ForgetAccountAsync(int accountId)
+    {
+        foreach (var key in _connections.Keys.Where(k => k.AccountId == accountId).ToList())
+            if (_connections.TryRemove(key, out var connection))
+                await connection.DisposeAsync();
+    }
+
+    public async Task VerifySmtpAsync(Account account, string password, CancellationToken ct = default)
+    {
+        using var smtp = new SmtpClient();
+        await smtp.ConnectAsync(account.SmtpHost, account.SmtpPort, ImapConnection.ToSocketOptions(account.SmtpSecurity), ct);
+        if (smtp.Capabilities.HasFlag(SmtpCapabilities.Authentication))
+            await smtp.AuthenticateAsync(account.UserName, password, ct);
+        await smtp.DisconnectAsync(true, ct);
+    }
+
     public async Task VerifyAsync(Account account, string password, CancellationToken ct = default)
     {
         using var client = new ImapClient();

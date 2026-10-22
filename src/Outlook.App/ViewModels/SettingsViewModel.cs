@@ -9,10 +9,11 @@ public partial class SettingsViewModel : ObservableObject
     private readonly AppSettings _settings;
     private readonly string _accountEmail;
 
-    public SettingsViewModel(AppSettings settings, string accountEmail)
+    public SettingsViewModel(AppSettings settings, string accountEmail, MainWindowViewModel? accounts = null)
     {
         _settings = settings;
         _accountEmail = accountEmail;
+        AccountsHost = accounts;
         _theme = settings.Theme;
         _newMailNotifications = settings.NewMailNotifications;
         _showAsConversations = settings.ShowAsConversations;
@@ -28,6 +29,13 @@ public partial class SettingsViewModel : ObservableObject
 
     public static string[] Themes { get; } = ["System", "Light", "Dark"];
     public static ReminderOption[] ReminderOptions => AppointmentEditorViewModel.ReminderOptions;
+
+    /// <summary>Account changes (add, edit, remove, switch) apply at once, like Outlook's Account Settings.</summary>
+    public MainWindowViewModel? AccountsHost { get; }
+    public bool HasAccountsHost => AccountsHost is not null;
+
+    /// <summary>Which page is open; Accounts is first.</summary>
+    [ObservableProperty] private int _selectedTab;
 
     public string AccountEmail => _accountEmail;
     public bool HasAccount => _accountEmail.Length > 0;

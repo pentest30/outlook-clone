@@ -8,6 +8,10 @@ public interface IMailStore
 {
     Task<IReadOnlyList<Account>> GetAccountsAsync(CancellationToken ct = default);
     Task<Account> AddAccountAsync(Account account, CancellationToken ct = default);
+    /// <summary>Saves changed name or server settings.</summary>
+    Task UpdateAccountAsync(Account account, CancellationToken ct = default);
+    /// <summary>Removes the account and everything cached for it (mail, calendar, address book).</summary>
+    Task RemoveAccountAsync(int accountId, CancellationToken ct = default);
 
     Task<IReadOnlyList<MailFolder>> GetFoldersAsync(int accountId, CancellationToken ct = default);
     Task<IReadOnlyList<MailMessage>> GetMessagesAsync(int folderId, int take = 500, CancellationToken ct = default);

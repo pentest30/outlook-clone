@@ -22,8 +22,14 @@ public interface IMailService
     /// <summary>Raised (on a background thread) when push notifications report new or changed mail.</summary>
     event EventHandler<FolderChangedEventArgs>? FolderChanged;
 
-    /// <summary>Connects and logs in, throwing if the settings or password are wrong.</summary>
+    /// <summary>Closes the account's open connections, after its settings or password changed or it was removed.</summary>
+    Task ForgetAccountAsync(int accountId);
+
+    /// <summary>Connects and logs in to the incoming (IMAP) server, throwing if the settings or password are wrong.</summary>
     Task VerifyAsync(Account account, string password, CancellationToken ct = default);
+
+    /// <summary>The same for the outgoing (SMTP) server, so a wrong setting shows up at setup rather than at the first send.</summary>
+    Task VerifySmtpAsync(Account account, string password, CancellationToken ct = default);
 
     Task SyncAccountAsync(Account account, IProgress<SyncProgress>? progress = null, CancellationToken ct = default);
 

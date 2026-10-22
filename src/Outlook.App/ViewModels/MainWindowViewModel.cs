@@ -8,6 +8,7 @@ using Outlook.Core.Models;
 using Outlook.Core.Search;
 using Outlook.Core.Services;
 using Outlook.Core.Text;
+using Outlook.Mail;
 
 namespace Outlook.App.ViewModels;
 
@@ -21,6 +22,8 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly IMailService _mail;
     private readonly IMailStore _store;
     private readonly ICalendarService _calendar;
+    private readonly ICredentialStore _credentials;
+    private readonly ServerDiscovery _discovery;
     private readonly AppSettings _settings;
     private readonly DispatcherTimer _syncTimer;
     private Account? _account;
@@ -33,11 +36,13 @@ public partial class MainWindowViewModel : ObservableObject
     private Dictionary<string, Category> _categoriesByKeyword = [];
 
     public MainWindowViewModel(IMailService mail, IMailStore store, ICredentialStore credentials, AppSettings settings,
-        ICalendarService calendar)
+        ICalendarService calendar, ServerDiscovery discovery)
     {
         _mail = mail;
         _store = store;
         _calendar = calendar;
+        _credentials = credentials;
+        _discovery = discovery;
         Calendar = new CalendarViewModel(calendar, () => _account, () => settings.DefaultReminderMinutes);
         settings.Changed += OnSettingsChanged;
         Reminders = new RemindersViewModel(calendar, () => _account);
@@ -45,7 +50,6 @@ public partial class MainWindowViewModel : ObservableObject
         _settings = settings;
         _showAsConversations = settings.ShowAsConversations;
         _searchAllFolders = settings.SearchAllFolders;
-        AccountSetup = new AccountSetupViewModel(mail, store, credentials, OnAccountAddedAsync);
         ReadingBody = new MessageBodyViewModel(mail, store, InvitationForAsync);
         _syncTimer = new DispatcherTimer { Interval = SyncInterval };
         _syncTimer.Tick += (_, _) => SyncCommand.Execute(null);
@@ -104,7 +108,11 @@ public partial class MainWindowViewModel : ObservableObject
     public event Action<SettingsViewModel>? SettingsRequested;
 
     [RelayCommand]
-    private void OpenSettings() => SettingsRequested?.Invoke(new SettingsViewModel(_settings, _account?.Email ?? ""));
+    private void OpenSettings() => SettingsRequested?.Invoke(new SettingsViewModel(_settings, _account?.Email ?? "", this));
+
+    /// <summary>Settings opened on the Accounts page (from the account switcher).</summary>
+    [RelayCommand]
+    private void ManageAccounts() => SettingsRequested?.Invoke(new SettingsViewModel(_settings, _account?.Email ?? "", this) { SelectedTab = 0 });
 
     private void OnSettingsChanged()
     {
@@ -124,7 +132,14 @@ public partial class MainWindowViewModel : ObservableObject
     /// <summary>Set by the view: shows a yes/no question and returns the answer.</summary>
     public Func<string, Task<bool>>? Confirm { get; set; }
 
-    public AccountSetupViewModel AccountSetup { get; }
+    /// <summary>The first-run form, shown over the window while there is no account.</summary>
+    [ObservableProperty] private AccountSetupViewModel? _accountSetup;
+
+    /// <summary>Every configured account, for Settings › Accounts and the switcher in the title bar.</summary>
+    public ObservableCollection<AccountRowViewModel> Accounts { get; } = [];
+
+    /// <summary>Raised to show the add / edit account window; the view owns windows.</summary>
+    public event Action<AccountSetupViewModel>? AccountSetupRequested;
     public ObservableCollection<FolderViewModel> Folders { get; } = [];
     public ObservableCollection<MessageItemViewModel> Messages { get; } = [];
     public ObservableCollection<ConversationCardViewModel> ConversationCards { get; } = [];
@@ -211,22 +226,121 @@ public partial class MainWindowViewModel : ObservableObject
         var accounts = await _store.GetAccountsAsync();
         if (accounts.Count == 0)
         {
-            IsAccountSetupVisible = true;
+            ShowFirstRunSetup();
             return;
         }
-        await OpenAccountAsync(accounts[0]);
+        var active = accounts.FirstOrDefault(a => a.Id == _settings.ActiveAccountId) ?? accounts[0];
+        await OpenAccountAsync(active);
+        await RefreshAccountListAsync();
     }
 
-    private async Task OnAccountAddedAsync(Account account)
+    private AccountSetupViewModel NewSetup(Account? existing, bool canCancel, Func<Account, bool, Task> onSaved) =>
+        new(_mail, _store, _credentials, _discovery.DiscoverAsync, onSaved, existing, canCancel);
+
+    private void ShowFirstRunSetup()
     {
-        IsAccountSetupVisible = false;
-        await OpenAccountAsync(account);
+        AccountSetup = NewSetup(null, canCancel: false, async (account, _) =>
+        {
+            IsAccountSetupVisible = false;
+            await SwitchAccountAsync(account);
+        });
+        IsAccountSetupVisible = true;
+    }
+
+    private async Task RefreshAccountListAsync()
+    {
+        var accounts = await _store.GetAccountsAsync();
+        Accounts.Clear();
+        foreach (var a in accounts)
+            Accounts.Add(new AccountRowViewModel(a, a.Id == _account?.Id));
+    }
+
+    // ───────────────────────────── Accounts ─────────────────────────────
+
+    [RelayCommand]
+    private void AddAccount() =>
+        AccountSetupRequested?.Invoke(NewSetup(null, canCancel: true, async (account, _) => await SwitchAccountAsync(account)));
+
+    [RelayCommand]
+    private void EditAccount(AccountRowViewModel row) =>
+        AccountSetupRequested?.Invoke(NewSetup(row.Account, canCancel: true, async (account, _) =>
+        {
+            // Reconnect with the new settings if it is the open account.
+            if (account.Id == _account?.Id)
+            {
+                await CloseAccountAsync();
+                await OpenAccountAsync(account);
+            }
+            await RefreshAccountListAsync();
+        }));
+
+    [RelayCommand]
+    private async Task RemoveAccountAsync(AccountRowViewModel row)
+    {
+        var question = $"Remove {row.Email} from this app? Its mail stays on the server; the copy kept on this computer, " +
+                       "its calendar and its saved password are deleted.";
+        if (Confirm is not null && !await Confirm(question)) return;
+
+        var wasActive = row.Account.Id == _account?.Id;
+        if (wasActive) await CloseAccountAsync();
+        await _mail.ForgetAccountAsync(row.Account.Id);
+        await _store.RemoveAccountAsync(row.Account.Id);
+        _credentials.Delete(row.Account.Id);
+
+        var remaining = await _store.GetAccountsAsync();
+        if (wasActive)
+        {
+            if (remaining.Count > 0) await SwitchAccountAsync(remaining[0]);
+            else ShowFirstRunSetup();
+        }
+        await RefreshAccountListAsync();
+    }
+
+    [RelayCommand]
+    private Task SwitchToAsync(AccountRowViewModel row) => SwitchAccountAsync(row.Account);
+
+    public async Task SwitchAccountAsync(Account account)
+    {
+        if (account.Id != _account?.Id)
+        {
+            await CloseAccountAsync();
+            await OpenAccountAsync(account);
+        }
+        await RefreshAccountListAsync();
+    }
+
+    /// <summary>Stops sync and push for the open account and empties the panes.</summary>
+    private async Task CloseAccountAsync()
+    {
+        _syncTimer.Stop();
+        if (_pushCts is not null)
+        {
+            await _pushCts.CancelAsync();
+            _pushCts = null;
+        }
+        _account = null;
+        _activeSearch = null;
+        SearchText = "";
+        _loadedListKey = null;
+        _notifiedThroughId = null;
+        SelectedMessage = null;
+        SelectedFolder = null;
+        Folders.Clear();
+        Messages.Clear();
+        ConversationCards.Clear();
+        ReadingBody.Clear();
+        AccountEmail = "";
+        InboxUnreadCount = 0;
+        StatusText = "";
     }
 
     private async Task OpenAccountAsync(Account account)
     {
         _account = account;
+        _settings.ActiveAccountId = account.Id;
+        _settings.Save();
         AccountEmail = account.Email;
+        if (IsCalendarActive) _ = Calendar.ReloadAsync();
         NewMailCommand.NotifyCanExecuteChanged();
         await LoadCategoriesAsync();
         await ReloadFoldersAsync();   // show the cache immediately, then refresh from the server

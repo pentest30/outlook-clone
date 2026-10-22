@@ -1,0 +1,12 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Outlook.App.ViewModels"
+        xmlns:views="using:Outlook.App.Views"
+        x:Class="Outlook.App.Views.AccountSetupWindow"
+        x:DataType="vm:AccountSetupViewModel"
+        Title="{Binding Heading}"
+        Width="620" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource PaneBrush}">
+  <views:AccountSetupView Margin="20" />
+</Window>

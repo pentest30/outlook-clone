@@ -70,6 +70,8 @@ public partial class MainWindow : Window
         });
         vm.NewMailArrived += messages => _toasts.ShowNewMail(messages);
         vm.SettingsRequested += settings => new SettingsWindow { DataContext = settings }.ShowDialog(this);
+        // Over whichever window asked (Settings is modal, so the form must be modal on top of it).
+        vm.AccountSetupRequested += setup => new AccountSetupWindow { DataContext = setup }.ShowDialog(TopWindow());
     }
 
     private bool _closeAfterFlush;
@@ -92,6 +94,32 @@ public partial class MainWindow : Window
         base.OnClosed(e);
         if (Vm is { } vm)
             await vm.StopAsync();
+    }
+
+    /// <summary>The active window of the app (a dialog if one is open), to own the next dialog.</summary>
+    private Window TopWindow() =>
+        (Avalonia.Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)
+        ?.Windows.LastOrDefault(w => w.IsActive) ?? this;
+
+    /// <summary>The address in the title bar: switch account, add one, or open Settings › Accounts.</summary>
+    private void OnAccountButtonClick(object? sender, RoutedEventArgs e)
+    {
+        if (Vm is not { } vm) return;
+        var items = new List<Control>();
+        foreach (var row in vm.Accounts)
+        {
+            items.Add(new MenuItem
+            {
+                Header = row.Email,
+                Icon = row.IsActive ? new TextBlock { Text = "✓" } : null,
+                Command = vm.SwitchToCommand,
+                CommandParameter = row,
+            });
+        }
+        items.Add(new Separator());
+        items.Add(new MenuItem { Header = "Add account…", Command = vm.AddAccountCommand });
+        items.Add(new MenuItem { Header = "Manage accounts…", Command = vm.ManageAccountsCommand });
+        new ContextMenu { ItemsSource = items, Placement = PlacementMode.BottomEdgeAlignedRight }.Open(AccountButton);
     }
 
     private ToastManager? _toasts;

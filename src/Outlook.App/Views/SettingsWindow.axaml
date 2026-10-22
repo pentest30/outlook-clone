@@ -20,7 +20,47 @@
       </StackPanel>
     </Border>
 
-    <TabControl x:Name="Tabs" TabStripPlacement="Left" Padding="20,8">
+    <TabControl x:Name="Tabs" TabStripPlacement="Left" Padding="20,8" SelectedIndex="{Binding SelectedTab}">
+      <TabItem Header="Accounts" IsVisible="{Binding HasAccountsHost}">
+        <DockPanel DataContext="{Binding AccountsHost}" x:DataType="vm:MainWindowViewModel">
+          <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,10">
+            <TextBlock Text="Accounts" Classes="paneTitle" />
+            <TextBlock Text="Changes here apply straight away. "Open" switches the window to that account."
+                       FontSize="12" Classes="muted" TextWrapping="Wrap" />
+          </StackPanel>
+          <Button DockPanel.Dock="Bottom" Classes="primary" Content="＋  Add account" Command="{Binding AddAccountCommand}"
+                  HorizontalAlignment="Left" Margin="0,10,0,0" />
+          <ItemsControl ItemsSource="{Binding Accounts}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:AccountRowViewModel">
+                <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" CornerRadius="6" Padding="12,10" Margin="0,0,0,8">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Spacing="2">
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="{Binding Email}" FontWeight="SemiBold" />
+                        <Border Background="{DynamicResource AccentBrush}" CornerRadius="8" Padding="7,1" IsVisible="{Binding IsActive}">
+                          <TextBlock Text="Open" FontSize="11" Foreground="White" />
+                        </Border>
+                      </StackPanel>
+                      <TextBlock Text="{Binding Name}" FontSize="12" Classes="muted" />
+                      <TextBlock Text="{Binding Servers}" FontSize="12" Classes="muted" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                      <Button Classes="command" Content="Open" IsVisible="{Binding !IsActive}"
+                              Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).SwitchToCommand}" CommandParameter="{Binding}" />
+                      <Button Classes="command" Content="Edit…"
+                              Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).EditAccountCommand}" CommandParameter="{Binding}" />
+                      <Button Classes="command" Content="Remove"
+                              Command="{Binding $parent[ItemsControl].((vm:MainWindowViewModel)DataContext).RemoveAccountCommand}" CommandParameter="{Binding}" />
+                    </StackPanel>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </DockPanel>
+      </TabItem>
+
       <TabItem Header="General">
         <StackPanel Spacing="14">
           <TextBlock Text="General" Classes="paneTitle" />

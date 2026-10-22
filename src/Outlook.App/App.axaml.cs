@@ -132,6 +132,7 @@ public partial class App : Application
         services.AddSingleton<IMailService>(sp => sp.GetRequiredService<ImapMailService>());
         services.AddSingleton<ICalendarService, CalendarService>();
         services.AddSingleton(_ => AppSettings.Load(Path.Combine(dataDir, "settings.json")));
+        services.AddSingleton(_ => ServerDiscovery.CreateDefault());
         services.AddSingleton<MainWindowViewModel>();
 
         return services.BuildServiceProvider();

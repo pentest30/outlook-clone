@@ -3,45 +3,60 @@
              xmlns:vm="using:Outlook.App.ViewModels"
              x:Class="Outlook.App.Views.AccountSetupView"
              x:DataType="vm:AccountSetupViewModel">
-  <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="28,24" Width="520"
+  <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="28,24" Width="540"
           HorizontalAlignment="Center" VerticalAlignment="Center" BoxShadow="0 8 32 0 #40000000">
     <StackPanel Spacing="10">
-      <TextBlock Text="Add an account" FontSize="22" FontWeight="SemiBold" />
-      <TextBlock Text="Any IMAP/SMTP mailbox. Microsoft 365 and Gmail need OAuth sign-in, which arrives in Phase 3."
-                 TextWrapping="Wrap" Classes="muted" />
+      <TextBlock Text="{Binding Heading}" FontSize="22" FontWeight="SemiBold" />
+      <TextBlock Text="Enter your address and password; the server settings are found for you."
+                 TextWrapping="Wrap" Classes="muted" IsVisible="{Binding IsNew}" />
 
-      <Grid ColumnDefinitions="*,12,*" RowDefinitions="Auto,Auto">
-        <TextBox Watermark="Your name" Text="{Binding DisplayName}" />
-        <TextBox Grid.Column="2" Watermark="Email address" Text="{Binding Email}" />
-      </Grid>
-      <Grid ColumnDefinitions="*,12,*">
-        <TextBox Watermark="User name" Text="{Binding UserName}" />
-        <TextBox Grid.Column="2" Watermark="Password" PasswordChar="•" Text="{Binding Password}" />
-      </Grid>
+      <TextBox Watermark="Your name (shown to people you write to)" Text="{Binding DisplayName}" />
+      <TextBox x:Name="EmailBox" Watermark="E-mail address" Text="{Binding Email}" />
+      <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding DiscoveryNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+        <ProgressBar IsIndeterminate="True" Width="40" MinWidth="0" IsVisible="{Binding IsDiscovering}" VerticalAlignment="Center" />
+        <TextBlock Text="{Binding DiscoveryNote}" FontSize="12" Foreground="{DynamicResource AccentBrush}" TextWrapping="Wrap" MaxWidth="440" />
+      </StackPanel>
+      <TextBox Watermark="{Binding PasswordHint}" PasswordChar="•" Text="{Binding Password}" />
 
-      <TextBlock Text="Incoming mail (IMAP)" FontWeight="SemiBold" Margin="0,8,0,0" />
-      <Grid ColumnDefinitions="*,8,80,8,140">
-        <TextBox Watermark="Server" Text="{Binding ImapHost}" />
-        <NumericUpDown Grid.Column="2" Value="{Binding ImapPort}" Minimum="1" Maximum="65535" ShowButtonSpinner="False" FormatString="0" />
-        <ComboBox Grid.Column="4" HorizontalAlignment="Stretch"
-                  ItemsSource="{x:Static vm:AccountSetupViewModel.SecurityOptions}" SelectedItem="{Binding ImapSecurity}" />
-      </Grid>
+      <Button Classes="command" Padding="0,4" Command="{Binding ToggleServerSettingsCommand}" HorizontalAlignment="Left">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <TextBlock Text="▸" IsVisible="{Binding !ShowServerSettings}" />
+          <TextBlock Text="▾" IsVisible="{Binding ShowServerSettings}" />
+          <TextBlock Text="Server settings" />
+        </StackPanel>
+      </Button>
 
-      <TextBlock Text="Outgoing mail (SMTP)" FontWeight="SemiBold" Margin="0,8,0,0" />
-      <Grid ColumnDefinitions="*,8,80,8,140">
-        <TextBox Watermark="Server" Text="{Binding SmtpHost}" />
-        <NumericUpDown Grid.Column="2" Value="{Binding SmtpPort}" Minimum="1" Maximum="65535" ShowButtonSpinner="False" FormatString="0" />
-        <ComboBox Grid.Column="4" HorizontalAlignment="Stretch"
-                  ItemsSource="{x:Static vm:AccountSetupViewModel.SecurityOptions}" SelectedItem="{Binding SmtpSecurity}" />
-      </Grid>
+      <StackPanel Spacing="8" IsVisible="{Binding ShowServerSettings}">
+        <TextBox Watermark="User name (usually your address)" Text="{Binding UserName}" />
+        <TextBlock Text="Incoming mail (IMAP)" FontWeight="SemiBold" Margin="0,4,0,0" />
+        <Grid ColumnDefinitions="*,8,80,8,140">
+          <TextBox Watermark="Server" Text="{Binding ImapHost}" />
+          <NumericUpDown Grid.Column="2" Value="{Binding ImapPort}" Minimum="1" Maximum="65535" ShowButtonSpinner="False" FormatString="0" />
+          <ComboBox Grid.Column="4" HorizontalAlignment="Stretch"
+                    ItemsSource="{x:Static vm:AccountSetupViewModel.SecurityOptions}" SelectedItem="{Binding ImapSecurity}" />
+        </Grid>
+        <TextBlock Text="Outgoing mail (SMTP)" FontWeight="SemiBold" Margin="0,4,0,0" />
+        <Grid ColumnDefinitions="*,8,80,8,140">
+          <TextBox Watermark="Server" Text="{Binding SmtpHost}" />
+          <NumericUpDown Grid.Column="2" Value="{Binding SmtpPort}" Minimum="1" Maximum="65535" ShowButtonSpinner="False" FormatString="0" />
+          <ComboBox Grid.Column="4" HorizontalAlignment="Stretch"
+                    ItemsSource="{x:Static vm:AccountSetupViewModel.SecurityOptions}" SelectedItem="{Binding SmtpSecurity}" />
+        </Grid>
+        <Button Classes="command" Content="Detect again" Command="{Binding DiscoverCommand}" HorizontalAlignment="Left" />
+      </StackPanel>
 
       <TextBlock Text="{Binding Error}" Foreground="{DynamicResource FlagBrush}" TextWrapping="Wrap"
                  IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
-      <Grid ColumnDefinitions="*,Auto" Margin="0,8,0,0">
+      <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,8,0,0">
         <Button Classes="command" Content="Use local test server" Command="{Binding UseLocalTestServerCommand}"
-                ToolTip.Tip="GreenMail from docker-compose.yml" />
-        <Button Grid.Column="1" Classes="primary" Content="Sign in" Command="{Binding SignInCommand}" IsDefault="True" />
+                ToolTip.Tip="GreenMail from docker-compose.yml" IsVisible="{Binding ShowDevShortcut}" />
+        <ProgressBar Grid.Column="1" IsIndeterminate="True" Width="60" MinWidth="0" Margin="0,0,10,0" IsVisible="{Binding IsBusy}"
+                     VerticalAlignment="Center" />
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+          <Button Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding CanCancel}" />
+          <Button Classes="primary" Content="{Binding SaveLabel}" Command="{Binding SignInCommand}" IsDefault="True" />
+        </StackPanel>
       </Grid>
     </StackPanel>
   </Border>

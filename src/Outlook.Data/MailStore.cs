@@ -48,6 +48,30 @@ public class MailStore(Func<MailDbContext> createContext) : IMailStore
         return account;
     }
 
+    public async Task UpdateAccountAsync(Account account, CancellationToken ct = default)
+    {
+        await using var db = CreateContext();
+        var row = await db.Accounts.SingleAsync(a => a.Id == account.Id, ct);
+        row.DisplayName = account.DisplayName;
+        row.Email = account.Email;
+        row.UserName = account.UserName;
+        row.ImapHost = account.ImapHost;
+        row.ImapPort = account.ImapPort;
+        row.ImapSecurity = account.ImapSecurity;
+        row.SmtpHost = account.SmtpHost;
+        row.SmtpPort = account.SmtpPort;
+        row.SmtpSecurity = account.SmtpSecurity;
+        await db.SaveChangesAsync(ct);
+    }
+
+    public async Task RemoveAccountAsync(int accountId, CancellationToken ct = default)
+    {
+        await using var db = CreateContext();
+        // Folders (and their messages and attachments), appointments, categories and the address
+        // book all cascade from the account.
+        await db.Accounts.Where(a => a.Id == accountId).ExecuteDeleteAsync(ct);
+    }
+
     public async Task<IReadOnlyList<MailFolder>> GetFoldersAsync(int accountId, CancellationToken ct = default)
     {
         await using var db = CreateContext();

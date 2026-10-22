@@ -12,6 +12,9 @@ public sealed class AppSettings
     /// <summary>Desktop alerts for new mail while the window is in the background.</summary>
     public bool NewMailNotifications { get; set; } = true;
 
+    /// <summary>The account open in the window, remembered between runs.</summary>
+    public int? ActiveAccountId { get; set; }
+
     // ── Mail ──
     /// <summary>Outlook's "Show as Conversations".</summary>
     public bool ShowAsConversations { get; set; } = true;

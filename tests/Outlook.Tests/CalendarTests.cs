@@ -18,6 +18,8 @@ internal sealed class RecordingMailService : IMailService
 
     public event EventHandler<FolderChangedEventArgs>? FolderChanged { add { } remove { } }
     public Task VerifyAsync(Account a, string p, CancellationToken ct = default) => throw new NotSupportedException();
+    public Task ForgetAccountAsync(int accountId) => Task.CompletedTask;
+    public Task VerifySmtpAsync(Account a, string p, CancellationToken ct = default) => throw new NotSupportedException();
     public Task SyncAccountAsync(Account a, IProgress<SyncProgress>? p = null, CancellationToken ct = default) => throw new NotSupportedException();
     public Task SyncFolderAsync(Account a, MailFolder f, CancellationToken ct = default) => throw new NotSupportedException();
     public Task RunPushAsync(Account a, CancellationToken ct) => throw new NotSupportedException();
