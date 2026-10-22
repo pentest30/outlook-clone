@@ -68,7 +68,6 @@ tests/
 
 Deferred from Phase 1:
 - Rich-text (HTML) compose. Avalonia has no built-in rich text editor, so compose is plain text for now.
-- Opening a message in its own window (double-click currently only opens drafts)
 
 ### Phase 2a — Outlook-specific features (done)
 - Conversation view (toggle, remembered): one row per thread with participant names and a count.
@@ -98,23 +97,27 @@ Deferred from Phase 1:
 - Windows installer: `pwsh build/package.ps1` makes releases/OutlookClone.Desktop-win-Setup.exe
   (Velopack, per-user, self-contained, Start menu and desktop shortcuts, uninstaller)
 
+- Open a message in its own window: double-click, Enter or "Open" in the context menu (drafts go
+  back to compose), with Reply / Reply all / Forward / Delete, attachments and the meeting card
+- Close to tray (Settings › General, on by default): closing hides the window and mail keeps
+  syncing; Exit in the tray menu quits. One instance per data folder: launching again brings the
+  running window forward.
+- Reminders also show as a desktop alert while the window is minimised or hidden
+
 Still to do here: automatic updates (needs a place to publish releases), code signing (avoids
-the SmartScreen warning on first run), "close to tray"
+the SmartScreen warning on first run)
 
 ### Phase 2b — still to do
 - Server-side search for mail older than the cached window
 - Flags with due dates, pin
 - Focused / Other inbox, rules engine (on new mail: move / flag / categorise)
-- Scheduled send, signatures, auto-reply
+- Scheduled send, auto-reply
 - Category management (rename, recolour, delete)
-- Settings window (undo-send delay and the rest of settings.json)
-- Multiple accounts, unified Inbox
+- Unified Inbox across accounts
 
 ### Phase 3 — Accounts & robustness
 - OAuth2 (XOAUTH2) for Microsoft 365 / Outlook.com and Gmail. Both block plain-password IMAP.
-- Autodiscover (Mozilla ISPDB / well-known hosts)
-- CONDSTORE/QRESYNC deltas, retry/backoff, offline outbox queue
-- Notifications (toasts), system tray
+- CONDSTORE/QRESYNC deltas, offline outbox queue
 
 ### Phase 4a — Calendar (done)
 - Local calendar, like classic Outlook for IMAP/POP accounts (OVH MX Plan has no CalDAV). Each
@@ -144,10 +147,9 @@ the SmartScreen warning on first run), "close to tray"
 - CalDAV sync (and Microsoft Graph for Microsoft 365) for servers that have a calendar
 - Free/busy and the scheduling assistant; room booking
 - Time zone picker per appointment; showing a second time zone
-- Desktop notifications for reminders when the window is minimised
 
 ### Phase 5 — People & To Do
-- Contacts (CardDAV), address autocomplete from history
+- Contacts (CardDAV)
 - Flagged mail shows up as tasks
 
 ## Dev setup

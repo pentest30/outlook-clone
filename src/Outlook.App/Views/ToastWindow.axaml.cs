@@ -6,8 +6,8 @@ using Outlook.Core.Models;
 
 namespace Outlook.App.Views;
 
-/// <summary>What one alert shows.</summary>
-public sealed record ToastContent(string Heading, string Sender, string Subject, string Preview, MailMessage? Message)
+/// <summary>What one alert shows. Clicking runs Activated, or opens Message for a new-mail alert.</summary>
+public sealed record ToastContent(string Heading, string Sender, string Subject, string Preview, MailMessage? Message, Action? Activated = null)
 {
     public bool HasPreview => Preview.Length > 0;
 }

@@ -12,6 +12,12 @@ public sealed class AppSettings
     /// <summary>Desktop alerts for new mail while the window is in the background.</summary>
     public bool NewMailNotifications { get; set; } = true;
 
+    /// <summary>Closing the window hides it to the notification area; Exit in the tray menu quits.</summary>
+    public bool CloseToTray { get; set; } = true;
+
+    /// <summary>The "still running in the notification area" alert has been shown once.</summary>
+    public bool TrayHintShown { get; set; }
+
     /// <summary>The account open in the window, remembered between runs.</summary>
     public int? ActiveAccountId { get; set; }
 

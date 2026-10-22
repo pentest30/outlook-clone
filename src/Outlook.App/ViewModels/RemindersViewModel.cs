@@ -53,8 +53,8 @@ public partial class RemindersViewModel : ObservableObject
         _timer.Tick += async (_, _) => await CheckAsync();
     }
 
-    /// <summary>Raised when the window should appear (new reminders came due).</summary>
-    public event Action? ShowRequested;
+    /// <summary>Raised with the reminders that just came due, so the window (and an alert) can appear.</summary>
+    public event Action<IReadOnlyList<ReminderItemViewModel>>? ShowRequested;
     /// <summary>Raised to open an item from the window.</summary>
     public event Action<AppointmentOccurrence>? OpenRequested;
 
@@ -80,7 +80,7 @@ public partial class RemindersViewModel : ObservableObject
             return;   // try again on the next tick
         }
 
-        var added = false;
+        var added = new List<ReminderItemViewModel>();
         foreach (var o in upcoming)
         {
             if (o.Appointment.ReminderMinutes is not { } minutes) continue;
@@ -92,10 +92,10 @@ public partial class RemindersViewModel : ObservableObject
             if (_snoozedUntil.TryGetValue(item.Key, out var until) && until > now) continue;
             if (Items.Any(i => i.Key == item.Key)) continue;
             Items.Add(item);
-            added = true;
+            added.Add(item);
         }
         foreach (var item in Items) item.Refresh(now);
-        if (added) ShowRequested?.Invoke();
+        if (added.Count > 0) ShowRequested?.Invoke(added);
     }
 
     [RelayCommand]

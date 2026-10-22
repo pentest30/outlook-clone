@@ -89,6 +89,18 @@ public partial class MainWindowViewModel : ObservableObject
             NewMailArrived?.Invoke(fresh);
     }
 
+    /// <summary>Closing the window only hides it (Settings › General).</summary>
+    public bool CloseToTray => _settings.CloseToTray;
+
+    /// <summary>True the first time only, to explain once where the window went.</summary>
+    public bool TakeTrayHint()
+    {
+        if (_settings.TrayHintShown) return false;
+        _settings.TrayHintShown = true;
+        _settings.Save();
+        return true;
+    }
+
     /// <summary>From a desktop alert: show the message in the Inbox.</summary>
     public async Task ShowMessageAsync(MailMessage message)
     {
@@ -198,7 +210,7 @@ public partial class MainWindowViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(HasSelection))]
     [NotifyCanExecuteChangedFor(nameof(MarkReadCommand), nameof(MarkUnreadCommand), nameof(ToggleReadCommand),
         nameof(ToggleFlagCommand), nameof(ReplyCommand), nameof(ReplyAllCommand), nameof(ForwardCommand),
-        nameof(DeleteCommand), nameof(ArchiveCommand), nameof(MoveToCommand), nameof(OpenDraftCommand),
+        nameof(DeleteCommand), nameof(ArchiveCommand), nameof(MoveToCommand), nameof(OpenDraftCommand), nameof(OpenSelectedCommand),
         nameof(ToggleCategoryCommand), nameof(ClearCategoriesCommand))]
     private MessageItemViewModel? _selectedMessage;
 
@@ -712,9 +724,6 @@ public partial class MainWindowViewModel : ObservableObject
             await SetReadAsync([item], true);
     }
 
-    public Task<byte[]> GetAttachmentDataAsync(AttachmentViewModel attachment) =>
-        _store.GetAttachmentDataAsync(attachment.Attachment!.Id);
-
     // ───────────────────────────── Read / flag ─────────────────────────────
 
     [RelayCommand(CanExecute = nameof(HasSelection))]
@@ -933,6 +942,66 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(HasSelection))]
     private Task OpenDraftAsync() => IsDraftsFolder ? StartComposeAsync(ComposeMode.EditDraft) : Task.CompletedTask;
 
+    /// <summary>Double-click or Enter: a draft goes back to compose, anything else opens in its own window.</summary>
+    [RelayCommand(CanExecute = nameof(HasSelection))]
+    private Task OpenSelectedAsync()
+    {
+        if (SelectedMessage is not { } item) return Task.CompletedTask;
+        return IsDraftsFolder || item.Model.IsDraft ? StartComposeAsync(ComposeMode.EditDraft) : OpenInWindowAsync(item.Model);
+    }
+
+    /// <summary>Raised to show a message in its own window.</summary>
+    public event Action<MessageWindowViewModel>? MessageWindowRequested;
+
+    /// <summary>Outlook's double-click: the message (a conversation's newest) in a window of its own.</summary>
+    public async Task OpenInWindowAsync(MailMessage message)
+    {
+        var body = new MessageBodyViewModel(_mail, _store, InvitationForAsync);
+        var header = new MessageItemViewModel(message) { Categories = ChipsFor(message.CategoryKeywordList) };
+        MessageWindowRequested?.Invoke(new MessageWindowViewModel(header, body, this));
+        if (!await body.LoadAsync(message) || !_settings.MarkReadWhenOpened || message.IsRead || message.IsDraft) return;
+
+        // Its own row if it has one, so the list and unread count follow; else just the message.
+        if (Messages.FirstOrDefault(r => r.ThreadInFolder.Count == 1 && r.Model.Id == message.Id) is { } row)
+        {
+            await SetReadAsync([row], true);
+            return;
+        }
+        try
+        {
+            await _mail.SetReadAsync(message, true);
+            message.IsRead = true;
+            await ReloadFoldersAsync();
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Couldn't update the message: {ex.Message}";
+        }
+    }
+
+    /// <summary>Reply, reply all or forward from a message window.</summary>
+    public Task RespondAsync(ComposeMode mode, MailMessage message) => StartComposeAsync(mode, message);
+
+    /// <summary>Delete from a message window: to Trash, or permanently (after asking) from Trash.</summary>
+    public async Task<bool> DeleteMessageAsync(MailMessage message)
+    {
+        var inTrash = Folders.FirstOrDefault(f => f.Id == message.FolderId)?.Model.Special == SpecialFolder.Trash;
+        if (inTrash && Confirm is not null && !await Confirm("This message will be permanently deleted. Continue?"))
+            return false;
+        try
+        {
+            await _mail.DeleteAsync([message]);
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Couldn't delete: {ex.Message}";
+            return false;
+        }
+        await ReloadMessagesAsync();
+        await ReloadFoldersAsync();
+        return true;
+    }
+
     /// <summary>mailto: links in the reading pane.</summary>
     public void ComposeTo(string address)
     {
@@ -941,7 +1010,7 @@ public partial class MainWindowViewModel : ObservableObject
         OpenCompose(new ComposeViewModel(_mail, _account, ComposeMode.New, null, seed, [], null));
     }
 
-    private async Task StartComposeAsync(ComposeMode mode)
+    private async Task StartComposeAsync(ComposeMode mode, MailMessage? message = null)
     {
         if (_account is null) return;
         MailMessage? original = null;
@@ -950,9 +1019,8 @@ public partial class MainWindowViewModel : ObservableObject
 
         if (mode != ComposeMode.New)
         {
-            if (SelectedMessage is not { } item) return;
             // For a conversation, respond to its newest message in this folder.
-            var target = item.Model;
+            if ((message ?? SelectedMessage?.Model) is not { } target) return;
             try
             {
                 original = ReadingBody.Full?.Id == target.Id ? ReadingBody.Full

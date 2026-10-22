@@ -18,6 +18,9 @@ public partial class App : Application
 {
     private ServiceProvider? _services;
 
+    /// <summary>Set by Program: another launch asks this one to show its window.</summary>
+    internal static SingleInstance? Instance { get; set; }
+
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
     /// <summary>"Light", "Dark", or anything else to follow the operating system.</summary>
@@ -42,7 +45,11 @@ public partial class App : Application
             var vm = _services.GetRequiredService<MainWindowViewModel>();
             var window = new MainWindow { DataContext = vm };
             desktop.MainWindow = window;
+            // Hidden to the tray is not closed: the app lives until the main window really closes.
+            desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
             CreateTrayIcon(desktop, window, vm);
+            if (Instance is { } instance)
+                instance.ShowRequested += () => Dispatcher.UIThread.Post(window.BringToFront);
 
             // A bug in one handler should not take down the app and any unsaved compose windows with it.
             // Log it, tell the user, and keep running.
@@ -71,7 +78,7 @@ public partial class App : Application
             vm.NewMailCommand.Execute(null);
         };
         var exit = new NativeMenuItem("Exit");
-        exit.Click += (_, _) => desktop.Shutdown();
+        exit.Click += (_, _) => window.ExitApp();
 
         var tray = new TrayIcon
         {
@@ -91,7 +98,7 @@ public partial class App : Application
 
     // Everything local lives under %LOCALAPPDATA%\OutlookClone, like Outlook's own data folder.
     // OUTLOOKCLONE_DATA points it elsewhere, e.g. to keep a test profile apart from a real one.
-    private static readonly string DataDir =
+    internal static readonly string DataDir =
         Environment.GetEnvironmentVariable("OUTLOOKCLONE_DATA") is { Length: > 0 } custom
             ? custom
             : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OutlookClone");

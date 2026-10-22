@@ -16,6 +16,7 @@ public partial class SettingsViewModel : ObservableObject
         AccountsHost = accounts;
         _theme = settings.Theme;
         _newMailNotifications = settings.NewMailNotifications;
+        _closeToTray = settings.CloseToTray;
         _showAsConversations = settings.ShowAsConversations;
         _markReadWhenOpened = settings.MarkReadWhenOpened;
         _undoSendSeconds = settings.UndoSendSeconds;
@@ -42,6 +43,7 @@ public partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty] private string _theme;
     [ObservableProperty] private bool _newMailNotifications;
+    [ObservableProperty] private bool _closeToTray;
     [ObservableProperty] private bool _showAsConversations;
     [ObservableProperty] private bool _markReadWhenOpened;
 
@@ -60,6 +62,7 @@ public partial class SettingsViewModel : ObservableObject
     {
         _settings.Theme = Theme;
         _settings.NewMailNotifications = NewMailNotifications;
+        _settings.CloseToTray = CloseToTray;
         _settings.ShowAsConversations = ShowAsConversations;
         _settings.MarkReadWhenOpened = MarkReadWhenOpened;
         _settings.UndoSendSeconds = Math.Clamp(UndoSendSeconds, 0, 10);

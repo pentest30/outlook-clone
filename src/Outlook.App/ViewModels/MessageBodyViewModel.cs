@@ -53,7 +53,7 @@ public partial class MessageBodyViewModel(IMailService mail, IMailStore store,
 
             Attachments.Clear();
             foreach (var a in attachments.Where(a => !a.IsInline))
-                Attachments.Add(new AttachmentViewModel(a));
+                Attachments.Add(new AttachmentViewModel(a, () => store.GetAttachmentDataAsync(a.Id)));
             HasAttachments = Attachments.Count > 0;
             InlineImageResolver = inline.Count == 0 ? null : id => inline.GetValueOrDefault(id);
 

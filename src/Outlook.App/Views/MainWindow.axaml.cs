@@ -15,13 +15,6 @@ public partial class MainWindow : Window
 {
     private static readonly DataFormat<string> DragFormat = DataFormat.CreateStringApplicationFormat("outlook-clone-messages");
 
-    /// <summary>Opening these from mail is how malware spreads; Outlook blocks them too. Saving is still allowed.</summary>
-    private static readonly HashSet<string> BlockedExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".exe", ".com", ".bat", ".cmd", ".msi", ".msp", ".scr", ".pif", ".cpl", ".js", ".jse", ".vbs", ".vbe",
-        ".wsf", ".wsh", ".ps1", ".psm1", ".hta", ".jar", ".lnk", ".reg", ".inf", ".application", ".appref-ms",
-    };
-
     private Point? _dragStart;
     private List<MessageItemViewModel> _dragItems = [];
 
@@ -30,7 +23,7 @@ public partial class MainWindow : Window
         InitializeComponent();
 
         MessageList.SelectionChanged += (_, _) => Vm?.SetSelection(MessageList.SelectedItems?.OfType<MessageItemViewModel>() ?? []);
-        MessageList.DoubleTapped += (_, _) => Vm?.OpenDraftCommand.Execute(null);
+        MessageList.DoubleTapped += (_, _) => Vm?.OpenSelectedCommand.Execute(null);
         MessageList.ContextRequested += OnMessageContextRequested;
         MessageList.AddHandler(PointerPressedEvent, OnListPointerPressed, RoutingStrategies.Tunnel);
         MessageList.AddHandler(PointerMovedEvent, OnListPointerMoved, RoutingStrategies.Tunnel);
@@ -60,9 +53,10 @@ public partial class MainWindow : Window
         base.OnDataContextChanged(e);
         if (Vm is not { } vm) return;
         vm.ComposeRequested += compose => new ComposeWindow { DataContext = compose }.Show(this);
+        vm.MessageWindowRequested += message => new MessageWindow { DataContext = message }.Show(this);
         vm.Confirm = ConfirmAsync;
         vm.Reminders.ShowRequested += ShowReminders;
-        vm.IsInForeground = () => IsActive && WindowState != WindowState.Minimized;
+        vm.IsInForeground = () => IsVisible && IsActive && WindowState != WindowState.Minimized;
         _toasts = new ToastManager(this, message =>
         {
             BringToFront();
@@ -75,11 +69,32 @@ public partial class MainWindow : Window
     }
 
     private bool _closeAfterFlush;
+    private bool _exiting;
 
-    /// <summary>Messages still in their undo window are sent before the app exits, never dropped.</summary>
+    /// <summary>Really quit (the tray menu's Exit), even when closing normally only hides the window.</summary>
+    public void ExitApp()
+    {
+        _exiting = true;
+        Close();
+    }
+
+    /// <summary>
+    /// With "close to tray", closing hides the window and mail keeps syncing. On a real exit, messages
+    /// still in their undo window are sent first, never dropped.
+    /// </summary>
     protected override async void OnClosing(WindowClosingEventArgs e)
     {
         base.OnClosing(e);
+        var quitting = _exiting || e.CloseReason is WindowCloseReason.ApplicationShutdown or WindowCloseReason.OSShutdown;
+        if (!quitting && Vm is { CloseToTray: true } trayVm)
+        {
+            e.Cancel = true;
+            Hide();
+            if (trayVm.TakeTrayHint())
+                _toasts?.Show(new ToastContent("Outlook Clone", "Still running in the notification area",
+                    "New mail and reminders will keep coming. Right-click the icon and choose Exit to quit.", "", null, BringToFront));
+            return;
+        }
         if (_closeAfterFlush || Vm is not { HasPendingSends: true } vm)
             return;
         e.Cancel = true;
@@ -142,9 +157,16 @@ public partial class MainWindow : Window
 
     private RemindersWindow? _reminders;
 
-    private void ShowReminders()
+    private void ShowReminders(IReadOnlyList<ReminderItemViewModel> due)
     {
         if (Vm is not { } vm) return;
+        // The Reminders window can open behind other apps; an alert in the corner is always seen.
+        if (vm.IsInForeground?.Invoke() != true)
+            _toasts?.ShowReminders(due, reminder =>
+            {
+                BringToFront();
+                vm.Reminders.OpenCommand.Execute(reminder);
+            });
         if (_reminders is null)
         {
             _reminders = new RemindersWindow { DataContext = vm.Reminders };
@@ -167,6 +189,8 @@ public partial class MainWindow : Window
         {
             ItemsSource = new Control[]
             {
+                Item("Open", vm.OpenSelectedCommand, "Enter"),
+                new Separator(),
                 Item("Reply", vm.ReplyCommand, "Ctrl+R"),
                 Item("Reply all", vm.ReplyAllCommand, "Ctrl+Shift+R"),
                 Item("Forward", vm.ForwardCommand, "Ctrl+F"),
@@ -300,55 +324,8 @@ public partial class MainWindow : Window
 
     // ───────────────────────────── Links and attachments ─────────────────────────────
 
-    private async void OnMailLinkClicked(object? sender, MailLinkEventArgs e)
-    {
-        var link = e.Link;
-        if (link.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase))
-        {
-            var address = Uri.UnescapeDataString(link[7..].Split('?')[0]);
-            Vm?.ComposeTo(address);
-        }
-        else if (Uri.TryCreate(link, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https")
-        {
-            await Launcher.LaunchUriAsync(uri);
-        }
-    }
-
-    private void OnAttachmentClick(object? sender, RoutedEventArgs e)
-    {
-        if (sender is not Button { DataContext: AttachmentViewModel attachment } button) return;
-        var canOpen = !BlockedExtensions.Contains(Path.GetExtension(attachment.FileName));
-        var open = new MenuItem { Header = canOpen ? "Open" : "Open (blocked: this file type can run code)", IsEnabled = canOpen };
-        open.Click += async (_, _) => await OpenAttachmentAsync(attachment);
-        var save = new MenuItem { Header = "Save as…" };
-        save.Click += async (_, _) => await SaveAttachmentAsync(attachment);
-        new ContextMenu { ItemsSource = new[] { open, save }, Placement = PlacementMode.BottomEdgeAlignedLeft }.Open(button);
-    }
-
-    private async Task OpenAttachmentAsync(AttachmentViewModel attachment)
-    {
-        if (Vm is not { } vm) return;
-        // A fresh folder per open, so two attachments with the same name never collide.
-        var dir = Path.Combine(Path.GetTempPath(), "OutlookClone", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(dir);
-        var path = Path.Combine(dir, attachment.FileName);
-        await File.WriteAllBytesAsync(path, await vm.GetAttachmentDataAsync(attachment));
-        await Launcher.LaunchFileInfoAsync(new FileInfo(path));
-    }
-
-    private async Task SaveAttachmentAsync(AttachmentViewModel attachment)
-    {
-        if (Vm is not { } vm) return;
-        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
-        {
-            Title = "Save attachment",
-            SuggestedFileName = attachment.FileName,
-            ShowOverwritePrompt = true,
-        });
-        if (file is null) return;
-        await using var stream = await file.OpenWriteAsync();
-        await stream.WriteAsync(await vm.GetAttachmentDataAsync(attachment));
-    }
+    private async void OnMailLinkClicked(object? sender, MailLinkEventArgs e) =>
+        await MailActions.FollowLinkAsync(this, e.Link, address => Vm?.ComposeTo(address));
 
     // ───────────────────────────── Dialogs ─────────────────────────────
 

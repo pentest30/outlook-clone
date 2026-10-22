@@ -63,6 +63,7 @@ public sealed class MainWindowShots : IDisposable
         FolderId = f.Id, Uid = uid, FromName = from.Contains('@') ? "" : from, FromAddress = from.Contains('@') ? from : $"{uid}@x.test",
         Subject = subject, Preview = preview, Date = date, IsRead = read, ThreadId = thread, HasAttachments = attach,
         IsFlagged = flag, HasCalendar = calendar, To = "Iqbal Baouche <i.baouche@netcom-group.co>",
+        IsBodyDownloaded = true, BodyHtml = $"<p>Hello,</p><p>{preview}.</p><p>Best regards,<br>{from}</p>",
     };
 
     private static void Render(MainWindow window, string name)
@@ -91,7 +92,56 @@ public sealed class MainWindowShots : IDisposable
         vm.SelectedMessage = vm.Messages[1];
         Render(window, "main-dark-selected");
         Avalonia.Application.Current!.RequestedThemeVariant = ThemeVariant.Default;
+        window.ExitApp();
+    }
+
+    [AvaloniaFact]
+    public async Task Open_shows_the_message_in_its_own_window()
+    {
+        var vm = await SampleAsync();
+        var main = new MainWindow { DataContext = vm, Width = 1200, Height = 800 };
+        main.Show();
+        MessageWindowViewModel? opened = null;
+        vm.MessageWindowRequested += m => opened = m;
+
+        vm.SelectedMessage = vm.Messages.First(m => m.Subject.StartsWith("Votre lien"));
+        await vm.OpenSelectedCommand.ExecuteAsync(null);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.NotNull(opened);
+        Assert.Equal("Votre lien sécurisé vers Claude est ici", opened.Title);
+        Assert.Contains("Connectez-vous", opened.Body.Html);
+        Assert.True(opened.Message.IsRead);   // opening it counts as reading it
+        // A window of our own on the same view model, to look at.
+        var shown = new MessageWindow { DataContext = opened, Width = 900, Height = 640 };
+        shown.Show();
+        for (var i = 0; i < 5; i++) { Dispatcher.UIThread.RunJobs(); AvaloniaHeadlessPlatform.ForceRenderTimerTick(); }
+        Directory.CreateDirectory(Shots);
+        shown.CaptureRenderedFrame()?.Save(Path.Combine(Shots, "message-window.png"));
+        shown.Close();
+        main.ExitApp();
+    }
+
+    [AvaloniaFact]
+    public async Task Closing_hides_to_the_tray_and_exit_quits()
+    {
+        var vm = await SampleAsync();
+        var window = new MainWindow { DataContext = vm };
+        window.Show();
+        var closed = false;
+        window.Closed += (_, _) => closed = true;
+
         window.Close();
+        Dispatcher.UIThread.RunJobs();
+        Assert.False(closed);
+        Assert.False(window.IsVisible);
+
+        window.BringToFront();
+        Assert.True(window.IsVisible);
+
+        window.ExitApp();
+        Dispatcher.UIThread.RunJobs();
+        Assert.True(closed);
     }
 
     public void Dispose()

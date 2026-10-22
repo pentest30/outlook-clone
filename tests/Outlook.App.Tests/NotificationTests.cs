@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
+using Outlook.App.ViewModels;
 using Outlook.App.Views;
 using Outlook.Core.Models;
 
@@ -61,5 +62,30 @@ public class NotificationTests
         Dispatcher.UIThread.RunJobs();
 
         Assert.Equal(["Bilal", "Chen", "Dana"], toasts.Open.Select(t => ((ToastContent)t.DataContext!).Sender));
+    }
+
+    [AvaloniaFact]
+    public void A_due_reminder_shows_an_alert_that_opens_it()
+    {
+        var owner = new Window();
+        owner.Show();
+        var toasts = new ToastManager(owner, _ => { });
+        var start = DateTimeOffset.Now.AddMinutes(10);
+        var appointment = new Appointment { Id = 3, Title = "Equipe SI Billing", Location = "Webex", StartUtc = start, EndUtc = start.AddHours(1) };
+        var reminder = new ReminderItemViewModel(new AppointmentOccurrence(appointment, start, start.AddHours(1)));
+        reminder.Refresh(DateTimeOffset.Now);
+        ReminderItemViewModel? opened = null;
+
+        toasts.ShowReminders([reminder], r => opened = r);
+        Dispatcher.UIThread.RunJobs();
+
+        var content = (ToastContent)toasts.Open.Single().DataContext!;
+        Assert.Equal("Reminder · In 10 minutes", content.Heading);
+        Assert.Equal("Equipe SI Billing", content.Sender);
+        Assert.Equal("Webex", content.Preview);
+
+        toasts.Open[0].Click();
+        Assert.Same(reminder, opened);
+        Assert.Empty(toasts.Open);
     }
 }

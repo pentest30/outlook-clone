@@ -1,12 +1,13 @@
 using Avalonia;
 using Avalonia.Controls;
+using Outlook.App.ViewModels;
 using Outlook.Core.Models;
 
 namespace Outlook.App.Views;
 
 /// <summary>
-/// Shows new-mail alerts stacked upward from the bottom-right corner of the screen. At most a few
-/// at once; the last one summarises the rest ("+4 more new messages").
+/// Shows desktop alerts (new mail, reminders) stacked upward from the bottom-right corner of the
+/// screen. At most a few at once; the last one summarises the rest ("+4 more new messages").
 /// </summary>
 public sealed class ToastManager(Window owner, Action<MailMessage> open)
 {
@@ -31,7 +32,21 @@ public sealed class ToastManager(Window owner, Action<MailMessage> open)
         }
     }
 
-    private void Show(ToastContent content)
+    /// <summary>Calendar reminders that just came due; clicking one opens it.</summary>
+    public void ShowReminders(IReadOnlyList<ReminderItemViewModel> reminders, Action<ReminderItemViewModel> openReminder)
+    {
+        if (reminders.Count == 0) return;
+        var shown = reminders.Take(MaxVisible).ToList();
+        for (var i = 0; i < shown.Count; i++)
+        {
+            var r = shown[i];
+            var rest = reminders.Count - shown.Count;
+            var heading = i == shown.Count - 1 && rest > 0 ? $"Reminder · +{rest} more" : $"Reminder · {r.DueText}";
+            Show(new ToastContent(heading, r.Title, r.When, r.Location, null, () => openReminder(r)));
+        }
+    }
+
+    public void Show(ToastContent content)
     {
         // Too many already: drop the oldest so the stack never climbs the screen.
         while (_open.Count >= MaxVisible)
@@ -40,7 +55,8 @@ public sealed class ToastManager(Window owner, Action<MailMessage> open)
         var toast = new ToastWindow { DataContext = content };
         toast.Clicked += c =>
         {
-            if (c.Message is { } message) open(message);
+            if (c.Activated is { } activated) activated();
+            else if (c.Message is { } message) open(message);
         };
         toast.Closed += (_, _) =>
         {

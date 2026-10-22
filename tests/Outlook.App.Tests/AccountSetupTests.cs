@@ -32,7 +32,7 @@ internal sealed class FakeMail : IMailService
     public Task SyncFolderAsync(Account a, MailFolder f, CancellationToken ct = default) => Task.CompletedTask;
     public Task RunPushAsync(Account a, CancellationToken ct) => Task.CompletedTask;
     public Task<MailMessage> DownloadBodyAsync(MailMessage m, CancellationToken ct = default) => throw new NotSupportedException();
-    public Task SetReadAsync(MailMessage m, bool r, CancellationToken ct = default) => Task.CompletedTask;
+    public Task SetReadAsync(MailMessage m, bool r, CancellationToken ct = default) { m.IsRead = r; return Task.CompletedTask; }
     public Task SetFlaggedAsync(MailMessage m, bool f, CancellationToken ct = default) => Task.CompletedTask;
     public Task MarkRespondedAsync(MailMessage m, bool f, CancellationToken ct = default) => Task.CompletedTask;
     public Task SetCategoryAsync(IReadOnlyList<MailMessage> m, string k, bool a, CancellationToken ct = default) => Task.CompletedTask;

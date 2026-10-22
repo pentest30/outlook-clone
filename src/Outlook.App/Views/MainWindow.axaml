@@ -27,77 +27,6 @@
     <KeyBinding Gesture="Ctrl+OemComma" Command="{Binding OpenSettingsCommand}" />
   </Window.KeyBindings>
 
-  <Window.Resources>
-    <!-- Meeting card, attachment chips and the remote-pictures banner, shared by the single view and conversation cards. -->
-    <DataTemplate x:Key="BodyExtras" x:DataType="vm:MessageBodyViewModel">
-      <StackPanel Spacing="8">
-        <Border IsVisible="{Binding HasInvitation}" Background="{DynamicResource PaneBrush}" BorderBrush="{DynamicResource AccentBrush}"
-                BorderThickness="3,0,0,0" CornerRadius="4" Padding="14,10">
-          <StackPanel Spacing="5" DataContext="{Binding Invitation}" x:DataType="vm:InvitationViewModel">
-            <TextBlock Text="{Binding Heading}" FontSize="12" Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold" />
-            <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap" />
-            <StackPanel Orientation="Horizontal" Spacing="8">
-              <PathIcon Classes="small" Data="{StaticResource Icon.Clock}" />
-              <TextBlock Text="{Binding When}" TextWrapping="Wrap" />
-            </StackPanel>
-            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasWhere}">
-              <PathIcon Classes="small" Data="{StaticResource Icon.Location}" />
-              <TextBlock Text="{Binding Where}" TextWrapping="Wrap" />
-            </StackPanel>
-            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasRepeats}">
-              <PathIcon Classes="small" Data="{StaticResource Icon.ArrowRepeatAll}" />
-              <TextBlock Text="{Binding Repeats}" />
-            </StackPanel>
-            <TextBlock Text="{Binding Organizer, StringFormat='Organizer: {0}'}" FontSize="12" Classes="muted" />
-            <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,6,0,0" IsVisible="{Binding IsRequest}">
-              <Button Classes="primary" Content="Accept" Command="{Binding AcceptCommand}" />
-              <Button Content="Tentative" Command="{Binding TentativeCommand}" />
-              <Button Content="Decline" Command="{Binding DeclineCommand}" />
-              <CheckBox Content="Send response to organizer" IsChecked="{Binding SendResponse}" Margin="8,0,0,0" />
-            </StackPanel>
-            <Button Content="Remove from calendar" Command="{Binding RemoveCommand}" IsVisible="{Binding IsCancel}"
-                    HorizontalAlignment="Left" Margin="0,6,0,0" />
-            <TextBlock Text="{Binding Status}" FontSize="12" Classes="muted" TextWrapping="Wrap" />
-          </StackPanel>
-        </Border>
-
-        <ItemsControl ItemsSource="{Binding Attachments}" IsVisible="{Binding HasAttachments}">
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate>
-              <WrapPanel />
-            </ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:AttachmentViewModel">
-              <Button Click="OnAttachmentClick" Margin="0,0,8,6" Padding="10,6" Background="Transparent"
-                      BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" CornerRadius="4"
-                      ToolTip.Tip="Open or save">
-                <StackPanel Orientation="Horizontal" Spacing="10">
-                  <PathIcon Classes="large" Data="{StaticResource Icon.Attach}" Foreground="{DynamicResource AccentBrush}" />
-                  <StackPanel>
-                    <TextBlock Text="{Binding FileName}" MaxWidth="220" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Text="{Binding SizeText}" FontSize="11" Classes="muted" />
-                  </StackPanel>
-                </StackPanel>
-              </Button>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-
-        <!-- Outlook's privacy banner for remote pictures -->
-        <Border IsVisible="{Binding HasBlockedContent}" Background="{DynamicResource PaneBrush}"
-                BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" CornerRadius="4" Padding="10,6">
-          <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="To protect your privacy, some pictures in this message were not downloaded."
-                       FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap" />
-            <Button Grid.Column="1" Classes="command" Content="Download pictures" Command="{Binding DownloadPicturesCommand}"
-                    Foreground="{DynamicResource AccentBrush}" />
-          </Grid>
-        </Border>
-      </StackPanel>
-    </DataTemplate>
-  </Window.Resources>
-
   <Panel>
     <DockPanel>
       <!-- Header: app, search, account and settings -->
@@ -335,6 +264,9 @@
                        Margin="16,0,8,6" IsVisible="{Binding IsDraftsFolder}" />
             <ListBox x:Name="MessageList" Classes="pane" ItemsSource="{Binding Messages}"
                      SelectedItem="{Binding SelectedMessage}" SelectionMode="Multiple">
+              <ListBox.KeyBindings>
+                <KeyBinding Gesture="Enter" Command="{Binding OpenSelectedCommand}" />
+              </ListBox.KeyBindings>
               <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:MessageItemViewModel">
                   <StackPanel>
@@ -471,17 +403,17 @@
                     </StackPanel>
                   </Grid>
 
-                  <ContentControl Content="{Binding}" ContentTemplate="{StaticResource BodyExtras}" />
+                  <views:MessageBodyExtras />
                   <Border Height="1" Background="{DynamicResource DividerBrush}" />
                 </StackPanel>
                 <Panel>
                   <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" VerticalAlignment="Top" />
                   <!-- HTML mail is designed for a white page; plain text takes the theme (Border.mailBody styles). -->
-                  <Border Classes="mailBody" Classes.plain="{Binding IsPlainText}" Margin="0,8,0,0">
+                  <Border Classes="mailBody" Classes.plain="{Binding IsPlainText}" Margin="0,8,0,0" Padding="8">
                     <controls:MailHtmlPanel x:Name="BodyView" Text="{Binding Html}"
                                             AllowRemoteContent="{Binding AllowRemoteContent}"
                                             InlineImageResolver="{Binding InlineImageResolver}"
-                                            Background="Transparent" Padding="8" />
+                                            Background="Transparent" />
                   </Border>
                 </Panel>
               </DockPanel>
@@ -517,7 +449,7 @@
                           </Grid>
                         </Button>
                         <StackPanel IsVisible="{Binding IsExpanded}" Margin="12,0,12,12" Spacing="8">
-                          <ContentControl Content="{Binding Body}" ContentTemplate="{StaticResource BodyExtras}" />
+                          <views:MessageBodyExtras DataContext="{Binding Body}" />
                           <ProgressBar IsIndeterminate="True" IsVisible="{Binding Body.IsLoading}" />
                           <!-- Padding goes on the border: HtmlLabel offsets its text by its own Padding and clips the first letters. -->
                           <Border Classes="mailBody" Classes.plain="{Binding Body.IsPlainText}" Padding="8">

@@ -71,6 +71,9 @@
           <CheckBox Content="Show a desktop alert when new mail arrives" IsChecked="{Binding NewMailNotifications}" />
           <TextBlock Text="Alerts appear in the corner of the screen while Outlook Clone is in the background. Calendar reminders always show."
                      TextWrapping="Wrap" FontSize="12" Classes="muted" />
+          <CheckBox Content="Keep running in the notification area when the window is closed" IsChecked="{Binding CloseToTray}" />
+          <TextBlock Text="New mail and reminders keep arriving. Use Exit in the notification-area icon's menu to quit."
+                     TextWrapping="Wrap" FontSize="12" Classes="muted" />
         </StackPanel>
       </TabItem>
 
