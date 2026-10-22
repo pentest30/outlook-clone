@@ -241,7 +241,8 @@ public partial class MainWindow : Window
             .Where(f => f.Id != vm.SelectedFolder?.Id)
             .Select(f => new MenuItem
             {
-                Header = $"{f.Icon}  {f.Name}",
+                Header = f.Name,
+                Icon = new PathIcon { Data = f.Icon },
                 Padding = new Thickness(f.Indent.Left - 4, 4, 12, 4),
                 Command = vm.MoveToCommand,
                 CommandParameter = f,

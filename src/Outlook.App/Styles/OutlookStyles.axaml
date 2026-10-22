@@ -6,17 +6,43 @@
     <Setter Property="Icon" Value="/Assets/app.ico" />
   </Style>
 
+  <!-- Icons (Styles/Icons.axaml) take the text colour; 16 px in buttons. -->
+  <Style Selector="PathIcon">
+    <Setter Property="Width" Value="16" />
+    <Setter Property="Height" Value="16" />
+  </Style>
+  <Style Selector="PathIcon.small">
+    <Setter Property="Width" Value="13" />
+    <Setter Property="Height" Value="13" />
+  </Style>
+  <Style Selector="PathIcon.large">
+    <Setter Property="Width" Value="20" />
+    <Setter Property="Height" Value="20" />
+  </Style>
+
   <!-- Flat command-bar buttons, like Outlook's simplified ribbon. -->
-  <Style Selector="Button.command">
+  <Style Selector="Button.command, ToggleButton.command">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="Padding" Value="10,6" />
+    <Setter Property="Padding" Value="9,6" />
     <Setter Property="Margin" Value="0,0,2,0" />
     <Setter Property="CornerRadius" Value="4" />
   </Style>
-
-  <Style Selector="Button.command.active">
+  <Style Selector="Button.command:pointerover /template/ ContentPresenter, ToggleButton.command:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+  </Style>
+  <!-- Disabled: fade the label instead of Fluent's grey box. -->
+  <Style Selector="Button.command:disabled /template/ ContentPresenter, ToggleButton.command:disabled /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.command:disabled, ToggleButton.command:disabled">
+    <Setter Property="Opacity" Value="0.4" />
+  </Style>
+  <Style Selector="Button.command.active /template/ ContentPresenter, ToggleButton.command:checked /template/ ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+  </Style>
+  <Style Selector="Button.command.active">
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
 
@@ -31,20 +57,55 @@
     <Setter Property="Foreground" Value="White" />
     <Setter Property="Opacity" Value="0.9" />
   </Style>
+  <Style Selector="Button.primary:disabled">
+    <Setter Property="Opacity" Value="0.5" />
+  </Style>
 
-  <!-- Navigation rail (Mail / Calendar / People / To Do). -->
+  <!-- Header (title bar strip): buttons in the header colour. -->
+  <Style Selector="Button.header">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource HeaderForegroundBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="8,4" />
+    <Setter Property="CornerRadius" Value="4" />
+  </Style>
+  <Style Selector="Button.header:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="#26FFFFFF" />
+    <Setter Property="Foreground" Value="{DynamicResource HeaderForegroundBrush}" />
+  </Style>
+
+  <!-- Search box in the header. -->
+  <Style Selector="TextBox.search">
+    <Setter Property="Background" Value="{DynamicResource SearchBoxBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource SearchBoxForegroundBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="MinHeight" Value="30" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBox.search:pointerover /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="{DynamicResource SearchBoxBrush}" />
+  </Style>
+
+  <!-- Navigation rail (Mail / Calendar). -->
   <Style Selector="Button.rail">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Width" Value="40" />
     <Setter Property="Height" Value="40" />
-    <Setter Property="FontSize" Value="18" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
     <Setter Property="Margin" Value="4,2" />
     <Setter Property="CornerRadius" Value="6" />
   </Style>
-  <Style Selector="Button.rail.active">
+  <Style Selector="Button.rail:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+  </Style>
+  <Style Selector="Button.rail.active /template/ ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
+  </Style>
+  <Style Selector="Button.rail.active">
+    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
   </Style>
 
   <!-- Folder and message lists: tight rows, Outlook's light-blue selection. -->
@@ -55,8 +116,38 @@
     <Setter Property="Padding" Value="0" />
     <Setter Property="MinHeight" Value="0" />
   </Style>
+  <Style Selector="ListBox.pane ListBoxItem:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+  </Style>
   <Style Selector="ListBox.pane ListBoxItem:selected /template/ ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
+  </Style>
+
+  <!-- Thin pane dividers you can still grab (the visible line is the pane's own border). -->
+  <Style Selector="GridSplitter.pane">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="Width" Value="4" />
+    <Setter Property="Margin" Value="-2,0" />
+    <Setter Property="ZIndex" Value="1" />
+  </Style>
+
+  <!-- Small grey pill: conversation counts. -->
+  <Style Selector="Border.badge">
+    <Setter Property="Background" Value="{DynamicResource BadgeBrush}" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="6,0" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- Mail bodies: white for HTML (designed for it), theme colours for plain text. -->
+  <Style Selector="Border.mailBody">
+    <Setter Property="Background" Value="White" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="Border.mailBody.plain">
+    <Setter Property="Background" Value="Transparent" />
   </Style>
 
   <Style Selector="TextBlock.muted">

@@ -19,8 +19,10 @@
         <TextBlock Text="{Binding Preview}" FontSize="12" Classes="muted" TextWrapping="Wrap" MaxHeight="34"
                    TextTrimming="CharacterEllipsis" IsVisible="{Binding HasPreview}" />
       </StackPanel>
-      <Button Grid.Column="2" x:Name="CloseButton" Content="✕" FontSize="11" Padding="6,2" VerticalAlignment="Top"
-              Background="Transparent" BorderThickness="0" ToolTip.Tip="Dismiss" />
+      <Button Grid.Column="2" x:Name="CloseButton" Padding="6" VerticalAlignment="Top"
+              Background="Transparent" BorderThickness="0" ToolTip.Tip="Dismiss">
+        <PathIcon Width="11" Height="11" Data="{StaticResource Icon.Dismiss}" />
+      </Button>
     </Grid>
   </Border>
 </Window>

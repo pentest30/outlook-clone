@@ -210,8 +210,8 @@
                                   PointerCaptureLost="OnDragCaptureLost" DoubleTapped="OnBlockDoubleTapped" ToolTip.Tip="{Binding TimeText}">
                             <StackPanel>
                               <StackPanel Orientation="Horizontal" Spacing="4">
-                                <TextBlock Text="↻" FontSize="11" IsVisible="{Binding IsRecurring}" ToolTip.Tip="Repeats" />
-                                <TextBlock Text="👥" FontSize="10" IsVisible="{Binding IsMeeting}" ToolTip.Tip="Meeting" />
+                                <PathIcon Width="11" Height="11" Data="{StaticResource Icon.ArrowRepeatAll}" IsVisible="{Binding IsRecurring}" ToolTip.Tip="Repeats" />
+                                <PathIcon Width="11" Height="11" Data="{StaticResource Icon.People}" IsVisible="{Binding IsMeeting}" ToolTip.Tip="Meeting" />
                                 <TextBlock Text="{Binding Title}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                               </StackPanel>
                               <TextBlock Text="{Binding Location}" FontSize="11" Classes="muted" IsVisible="{Binding HasLocation}"

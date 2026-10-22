@@ -40,11 +40,14 @@ public class MailHtmlPanel : HtmlPanel
         ImageLoad += (_, e) => MailContent.LoadImage(e.Event, AllowRemoteContent, InlineImageResolver);
         StylesheetLoad += (_, e) => MailContent.LoadStylesheet(e.Event, AllowRemoteContent);
         LinkClicked += (_, e) => MailContent.ForwardLink(this, e.Event);
+        BaseStylesheet = MailContent.ThemeStylesheet(this);
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
+        if (change.Property == Avalonia.Controls.ThemeVariantScope.ActualThemeVariantProperty)
+            BaseStylesheet = MailContent.ThemeStylesheet(this);
         if (change.Property == AllowRemoteContentProperty || change.Property == InlineImageResolverProperty)
             MailContent.Rerender(this);
     }
@@ -82,11 +85,14 @@ public class MailHtmlLabel : HtmlLabel
         ImageLoad += (_, e) => MailContent.LoadImage(e.Event, AllowRemoteContent, InlineImageResolver);
         StylesheetLoad += (_, e) => MailContent.LoadStylesheet(e.Event, AllowRemoteContent);
         LinkClicked += (_, e) => MailContent.ForwardLink(this, e.Event);
+        BaseStylesheet = MailContent.ThemeStylesheet(this);
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
+        if (change.Property == Avalonia.Controls.ThemeVariantScope.ActualThemeVariantProperty)
+            BaseStylesheet = MailContent.ThemeStylesheet(this);
         if (change.Property == AllowRemoteContentProperty || change.Property == InlineImageResolverProperty)
             MailContent.Rerender(this);
     }
@@ -102,6 +108,15 @@ public static class MailContent
 {
     public static readonly RoutedEvent<MailLinkEventArgs> MailLinkClickedEvent =
         RoutedEvent.Register<HtmlControl, MailLinkEventArgs>("MailLinkClicked", RoutingStrategies.Bubble);
+
+    /// <summary>
+    /// Colours for plain-text mail (class "plain", see EmailHtml.FromPlainText), which sits on the
+    /// theme background. HTML mail keeps its own colours on white.
+    /// </summary>
+    internal static string ThemeStylesheet(Avalonia.StyledElement control) =>
+        control.ActualThemeVariant == Avalonia.Styling.ThemeVariant.Dark
+            ? ".plain { color: #E6E6E6; } .plain a { color: #6CB8F6; }"
+            : ".plain { color: #242424; } .plain a { color: #0F6CBD; }";
 
     /// <summary>Never let the renderer navigate on its own; hand the link to the window instead.</summary>
     internal static void ForwardLink(HtmlControl source, HtmlLinkClickedEventArgs args)

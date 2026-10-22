@@ -20,8 +20,8 @@
 
       <Button Classes="command" Padding="0,4" Command="{Binding ToggleServerSettingsCommand}" HorizontalAlignment="Left">
         <StackPanel Orientation="Horizontal" Spacing="6">
-          <TextBlock Text="▸" IsVisible="{Binding !ShowServerSettings}" />
-          <TextBlock Text="▾" IsVisible="{Binding ShowServerSettings}" />
+          <PathIcon Classes="small" Data="{StaticResource Icon.ChevronRight}" IsVisible="{Binding !ShowServerSettings}" />
+          <PathIcon Classes="small" Data="{StaticResource Icon.ChevronDown}" IsVisible="{Binding ShowServerSettings}" />
           <TextBlock Text="Server settings" />
         </StackPanel>
       </Button>

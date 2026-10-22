@@ -24,18 +24,6 @@ public class AttachmentViewModel
     public string FileName { get; }
     public long Size { get; }
 
-    public string Icon => Path.GetExtension(FileName).ToLowerInvariant() switch
-    {
-        ".pdf" => "📕",
-        ".doc" or ".docx" or ".txt" or ".rtf" => "📄",
-        ".xls" or ".xlsx" or ".csv" => "📊",
-        ".ppt" or ".pptx" => "📙",
-        ".png" or ".jpg" or ".jpeg" or ".gif" or ".bmp" or ".webp" => "🖼",
-        ".zip" or ".7z" or ".rar" => "🗜",
-        ".eml" or ".msg" => "✉",
-        _ => "📎",
-    };
-
     public string SizeText => FormatSize(Size);
 
     public static string FormatSize(long bytes) => bytes switch

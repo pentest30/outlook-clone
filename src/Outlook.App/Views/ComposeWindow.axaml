@@ -22,9 +22,24 @@
     <Border DockPanel.Dock="Top" Background="{DynamicResource PaneBrush}"
             BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1" Padding="8,6">
       <StackPanel Orientation="Horizontal" Spacing="2">
-        <Button Classes="command" Content="📎  Attach file" Click="OnAttachClick" />
-        <Button Classes="command" Content="💾  Save draft" Command="{Binding SaveDraftCommand}" ToolTip.Tip="Ctrl+S" />
-        <Button Classes="command" Content="🗑  Discard" Command="{Binding DiscardCommand}" />
+        <Button Classes="command" Click="OnAttachClick">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <PathIcon Data="{StaticResource Icon.Attach}" />
+            <TextBlock Text="Attach file" />
+          </StackPanel>
+        </Button>
+        <Button Classes="command" Command="{Binding SaveDraftCommand}" ToolTip.Tip="Ctrl+S">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <PathIcon Data="{StaticResource Icon.Drafts}" />
+            <TextBlock Text="Save draft" />
+          </StackPanel>
+        </Button>
+        <Button Classes="command" Command="{Binding DiscardCommand}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <PathIcon Data="{StaticResource Icon.Delete}" />
+            <TextBlock Text="Discard" />
+          </StackPanel>
+        </Button>
         <Rectangle Width="1" Fill="{DynamicResource DividerBrush}" Margin="8,4" />
         <ToggleButton Classes="command" Content="Bcc" IsChecked="{Binding ShowBcc}"
                       Background="Transparent" BorderThickness="0" Padding="10,6" />
@@ -42,7 +57,7 @@
       <Button Grid.RowSpan="4" Classes="primary" Width="72" Margin="0,0,12,0" VerticalAlignment="Stretch"
               Command="{Binding SendCommand}" ToolTip.Tip="Ctrl+Enter">
         <StackPanel Spacing="4" HorizontalAlignment="Center" VerticalAlignment="Center">
-          <TextBlock Text="➤" FontSize="22" HorizontalAlignment="Center" Foreground="White" />
+          <PathIcon Data="{StaticResource Icon.Send}" Width="22" Height="22" HorizontalAlignment="Center" Foreground="White" />
           <TextBlock Text="Send" HorizontalAlignment="Center" Foreground="White" />
         </StackPanel>
       </Button>
@@ -83,12 +98,14 @@
           <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" CornerRadius="4"
                   Padding="8,4" Margin="0,0,8,6">
             <StackPanel Orientation="Horizontal" Spacing="6">
-              <TextBlock Text="{Binding Icon}" VerticalAlignment="Center" />
+              <PathIcon Classes="small" Data="{StaticResource Icon.Attach}" VerticalAlignment="Center" />
               <TextBlock Text="{Binding FileName}" VerticalAlignment="Center" MaxWidth="220" TextTrimming="CharacterEllipsis" />
               <TextBlock Text="{Binding SizeText}" FontSize="11" Classes="muted" VerticalAlignment="Center" />
-              <Button Content="✕" Padding="4,0" Background="Transparent" BorderThickness="0" FontSize="11"
+              <Button Classes="command" Padding="4" Margin="0"
                       Command="{Binding $parent[Window].((vm:ComposeViewModel)DataContext).RemoveAttachmentCommand}"
-                      CommandParameter="{Binding}" ToolTip.Tip="Remove attachment" />
+                      CommandParameter="{Binding}" ToolTip.Tip="Remove attachment">
+                <PathIcon Width="10" Height="10" Data="{StaticResource Icon.Dismiss}" />
+              </Button>
             </StackPanel>
           </Border>
         </DataTemplate>

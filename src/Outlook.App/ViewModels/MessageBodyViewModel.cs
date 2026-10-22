@@ -20,6 +20,9 @@ public partial class MessageBodyViewModel(IMailService mail, IMailStore store,
     public MailMessage? Full { get; private set; }
 
     [ObservableProperty] private string _html = "";
+
+    /// <summary>The message has no HTML part: drawn in the theme's colours rather than on white.</summary>
+    [ObservableProperty] private bool _isPlainText;
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private bool _hasBlockedContent;
     [ObservableProperty] private bool _allowRemoteContent;
@@ -55,6 +58,7 @@ public partial class MessageBodyViewModel(IMailService mail, IMailStore store,
             InlineImageResolver = inline.Count == 0 ? null : id => inline.GetValueOrDefault(id);
 
             var prepared = EmailHtml.Prepare(full.BodyHtml, full.BodyText);
+            IsPlainText = string.IsNullOrWhiteSpace(full.BodyHtml);
             AllowRemoteContent = false;
             HasBlockedContent = prepared.HasRemoteContent;
             Html = prepared.Html;
@@ -68,6 +72,7 @@ public partial class MessageBodyViewModel(IMailService mail, IMailStore store,
         catch (Exception ex)
         {
             Html = EmailHtml.FromPlainText($"Couldn't download this message: {ex.Message}");
+            IsPlainText = true;
             return false;
         }
         finally
@@ -80,6 +85,7 @@ public partial class MessageBodyViewModel(IMailService mail, IMailStore store,
     {
         Full = null;
         Html = "";
+        IsPlainText = false;
         Attachments.Clear();
         HasAttachments = false;
         HasBlockedContent = false;

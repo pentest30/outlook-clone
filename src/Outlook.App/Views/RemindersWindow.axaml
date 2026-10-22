@@ -17,7 +17,7 @@
           <DataTemplate x:DataType="vm:ReminderItemViewModel">
             <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1" Padding="4,8">
               <Grid ColumnDefinitions="Auto,*,Auto">
-                <TextBlock Text="🔔" FontSize="18" VerticalAlignment="Top" Margin="0,0,10,0" />
+                <PathIcon Classes="large" Data="{StaticResource Icon.Clock}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Top" Margin="0,0,10,0" />
                 <StackPanel Grid.Column="1" Spacing="2">
                   <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                   <TextBlock Text="{Binding When}" FontSize="12" Classes="muted" />

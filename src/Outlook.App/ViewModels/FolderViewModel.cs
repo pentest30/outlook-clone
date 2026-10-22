@@ -12,16 +12,17 @@ public partial class FolderViewModel(MailFolder folder, int depth) : ObservableO
     /// <summary>Indent for nested folders in the folder pane.</summary>
     public Avalonia.Thickness Indent { get; } = new(12 + depth * 16, 0, 8, 0);
 
-    public string Icon => Model.Special switch
+    /// <summary>The folder's icon (Styles/Icons.axaml), as in Outlook's folder pane.</summary>
+    public Avalonia.Media.Geometry? Icon => Icons.Get(Model.Special switch
     {
-        SpecialFolder.Inbox => "📥",
-        SpecialFolder.Drafts => "📝",
-        SpecialFolder.Sent => "📤",
-        SpecialFolder.Trash => "🗑",
-        SpecialFolder.Junk => "⚠",
-        SpecialFolder.Archive => "🗄",
-        _ => "📁",
-    };
+        SpecialFolder.Inbox => "MailInbox",
+        SpecialFolder.Drafts => "Drafts",
+        SpecialFolder.Sent => "Send",
+        SpecialFolder.Trash => "Delete",
+        SpecialFolder.Junk => "Warning",
+        SpecialFolder.Archive => "Archive",
+        _ => "Folder",
+    });
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasUnread))]

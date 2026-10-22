@@ -19,7 +19,12 @@
             BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1" Padding="8,6">
       <StackPanel Orientation="Horizontal" Spacing="2">
         <Button Classes="primary" Content="{Binding SaveLabel}" Command="{Binding SaveCommand}" ToolTip.Tip="Ctrl+S" />
-        <Button Classes="command" Content="🗑  Delete" Command="{Binding DeleteCommand}" IsVisible="{Binding !IsNew}" />
+        <Button Classes="command" Command="{Binding DeleteCommand}" IsVisible="{Binding !IsNew}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <PathIcon Data="{StaticResource Icon.Delete}" />
+            <TextBlock Text="Delete" />
+          </StackPanel>
+        </Button>
         <Rectangle Width="1" Fill="{DynamicResource DividerBrush}" Margin="8,4" />
         <TextBlock Text="Show as" VerticalAlignment="Center" Margin="4,0" Classes="muted" />
         <ComboBox ItemsSource="{x:Static vm:AppointmentEditorViewModel.ShowAsOptions}" SelectedItem="{Binding ShowAs}" MinWidth="120" />

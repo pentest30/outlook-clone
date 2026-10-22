@@ -36,7 +36,8 @@ public static partial class EmailHtml
     /// <summary>Plain-text mail as HTML: escaped, line breaks kept, links clickable.</summary>
     public static string FromPlainText(string text)
     {
-        var sb = new StringBuilder("<div style=\"font-family: Segoe UI, sans-serif; font-size: 10.5pt\">");
+        // class="plain" lets the reading pane colour it for the light or dark theme.
+        var sb = new StringBuilder("<div class=\"plain\" style=\"font-family: Segoe UI, sans-serif; font-size: 10.5pt\">");
         foreach (var line in text.Replace("\r\n", "\n").Split('\n'))
         {
             var encoded = WebUtility.HtmlEncode(line);
