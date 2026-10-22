@@ -31,7 +31,22 @@ public static partial class EmailHtml
         // <img src=""> is a sender bug; browsers draw nothing, but the renderer would draw a broken-image box.
         s = EmptyImages().Replace(s, "");
         s = FreeTextCellHeights(s);
+        s = BackgroundShorthand().Replace(s, SpellOutBackgroundColor);
         return s;
+    }
+
+    /// <summary>
+    /// HtmlRenderer only reads background-color, so "background: #0F6CBD" (common in mail) drew nothing
+    /// and left white text on white. The colour is repeated as background-color; the original stays.
+    /// </summary>
+    private static string SpellOutBackgroundColor(Match m)
+    {
+        var value = m.Groups[1].Value.Trim();
+        var color = BackgroundColorToken().Match(value);
+        if (color.Success)
+            return $"{m.Value}; background-color: {color.Value}";
+        // A lone colour name, e.g. "background: white".
+        return NamedColor().IsMatch(value) ? $"{m.Value}; background-color: {value}" : m.Value;
     }
 
     /// <summary>
@@ -98,6 +113,16 @@ public static partial class EmailHtml
 
     [GeneratedRegex(@"\s+height\s*=\s*(""[^""]*""|'[^']*'|[^\s>]+)", RegexOptions.IgnoreCase)]
     private static partial Regex HeightAttribute();
+
+    // background: in a style attribute or <style> block, but not background-color, -image and so on.
+    [GeneratedRegex(@"(?<![-\w])background\s*:\s*([^;""'}<>]*)", RegexOptions.IgnoreCase)]
+    private static partial Regex BackgroundShorthand();
+
+    [GeneratedRegex(@"#[0-9a-f]{3,8}\b|rgba?\([^)]*\)", RegexOptions.IgnoreCase)]
+    private static partial Regex BackgroundColorToken();
+
+    [GeneratedRegex(@"^(?!none$|transparent$|inherit$|initial$)[a-z]+$", RegexOptions.IgnoreCase)]
+    private static partial Regex NamedColor();
 
     // Pictures, backgrounds and stylesheets loaded from the web.
     [GeneratedRegex(@"(<img\b[^>]*\bsrc\s*=\s*[""']?\s*https?:|\bbackground\s*=\s*[""']?\s*https?:|url\(\s*[""']?\s*https?:|<link\b[^>]*\bhref\s*=\s*[""']?\s*https?:)", RegexOptions.IgnoreCase)]
