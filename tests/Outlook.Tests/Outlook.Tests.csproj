@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Outlook.Core\Outlook.Core.csproj" />
+    <ProjectReference Include="..\..\src\Outlook.Data\Outlook.Data.csproj" />
+    <ProjectReference Include="..\..\src\Outlook.Mail\Outlook.Mail.csproj" />
+    <ProjectReference Include="..\..\src\Outlook.Calendar\Outlook.Calendar.csproj" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,479 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Outlook.App.ViewModels"
+        xmlns:views="using:Outlook.App.Views"
+        xmlns:controls="using:Outlook.App.Controls"
+        x:Class="Outlook.App.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Outlook Clone"
+        Width="1400" Height="860" MinWidth="900" MinHeight="560"
+        WindowStartupLocation="CenterScreen" WindowState="Maximized"
+        Background="{DynamicResource SurfaceBrush}">
+
+  <!-- Classic Outlook shortcuts (Ctrl+E for search is handled in code-behind, it moves focus). -->
+  <Window.KeyBindings>
+    <KeyBinding Gesture="Ctrl+N" Command="{Binding NewMailCommand}" />
+    <KeyBinding Gesture="Ctrl+R" Command="{Binding ReplyCommand}" />
+    <KeyBinding Gesture="Ctrl+Shift+R" Command="{Binding ReplyAllCommand}" />
+    <KeyBinding Gesture="Ctrl+F" Command="{Binding ForwardCommand}" />
+    <KeyBinding Gesture="Delete" Command="{Binding DeleteCommand}" />
+    <KeyBinding Gesture="Back" Command="{Binding ArchiveCommand}" />
+    <KeyBinding Gesture="F9" Command="{Binding SyncCommand}" />
+    <KeyBinding Gesture="Ctrl+Q" Command="{Binding MarkReadCommand}" />
+    <KeyBinding Gesture="Ctrl+U" Command="{Binding MarkUnreadCommand}" />
+    <KeyBinding Gesture="Insert" Command="{Binding ToggleFlagCommand}" />
+    <KeyBinding Gesture="Ctrl+1" Command="{Binding ShowMailCommand}" />
+    <KeyBinding Gesture="Ctrl+2" Command="{Binding ShowCalendarCommand}" />
+    <KeyBinding Gesture="Ctrl+OemComma" Command="{Binding OpenSettingsCommand}" />
+  </Window.KeyBindings>
+
+  <Panel>
+    <DockPanel>
+      <!-- Header: app, search, account and settings -->
+      <Border DockPanel.Dock="Top" Background="{DynamicResource HeaderBrush}" Height="48">
+        <Grid ColumnDefinitions="260,*,Auto" Margin="14,0,8,0">
+          <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+            <Image Source="/Assets/app.png" Width="22" Height="22" />
+            <TextBlock Text="Outlook" Foreground="{DynamicResource HeaderForegroundBrush}" FontSize="16" FontWeight="SemiBold"
+                       VerticalAlignment="Center" />
+          </StackPanel>
+
+          <Grid Grid.Column="1" ColumnDefinitions="*,Auto" MaxWidth="620" VerticalAlignment="Center" IsVisible="{Binding IsMailActive}">
+            <TextBox x:Name="SearchBox" Classes="search" Text="{Binding SearchText}" Watermark="Search (Ctrl+E)"
+                     ToolTip.Tip="Words, or: from:ana  subject:budget  has:attachment  is:unread  is:flagged  category:red">
+              <TextBox.InnerLeftContent>
+                <PathIcon Data="{StaticResource Icon.Search}" Foreground="{DynamicResource MutedTextBrush}" Margin="10,0,4,0" />
+              </TextBox.InnerLeftContent>
+              <TextBox.InnerRightContent>
+                <Button Classes="command" Padding="6,4" Margin="0,0,2,0" Command="{Binding ClearSearchCommand}"
+                        IsVisible="{Binding IsSearchActive}" ToolTip.Tip="Clear search (Esc)">
+                  <PathIcon Classes="small" Data="{StaticResource Icon.Dismiss}" />
+                </Button>
+              </TextBox.InnerRightContent>
+              <TextBox.KeyBindings>
+                <KeyBinding Gesture="Enter" Command="{Binding SearchCommand}" />
+                <KeyBinding Gesture="Escape" Command="{Binding ClearSearchCommand}" />
+              </TextBox.KeyBindings>
+            </TextBox>
+            <CheckBox Grid.Column="1" Content="All folders" IsChecked="{Binding SearchAllFolders}"
+                      Foreground="{DynamicResource HeaderForegroundBrush}" Margin="12,0,0,0"
+                      ToolTip.Tip="Search every folder, or only the one that is open" />
+          </Grid>
+
+          <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="2" VerticalAlignment="Center">
+            <Button x:Name="AccountButton" Classes="header" Click="OnAccountButtonClick" ToolTip.Tip="Switch, add or manage accounts">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="{Binding AccountEmail}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="220" />
+                <PathIcon Classes="small" Data="{StaticResource Icon.ChevronDown}" />
+              </StackPanel>
+            </Button>
+            <Button Classes="header" Command="{Binding OpenSettingsCommand}" ToolTip.Tip="Settings (Ctrl+,)">
+              <PathIcon Classes="large" Data="{StaticResource Icon.Settings}" />
+            </Button>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <!-- Command bar -->
+      <Border DockPanel.Dock="Top" Background="{DynamicResource CommandBarBrush}"
+              BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1" Padding="8,6">
+        <Panel>
+          <!-- Calendar commands -->
+          <Panel IsVisible="{Binding IsCalendarActive}">
+            <StackPanel Orientation="Horizontal" Spacing="2" DataContext="{Binding Calendar}" x:DataType="vm:CalendarViewModel">
+              <Button Classes="primary" Command="{Binding NewAppointmentCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <PathIcon Data="{StaticResource Icon.CalendarAdd}" Foreground="White" />
+                  <TextBlock Text="New appointment" />
+                </StackPanel>
+              </Button>
+              <Rectangle Width="1" Height="20" Fill="{DynamicResource DividerBrush}" Margin="8,0" />
+              <Button Classes="command" Classes.active="{Binding IsDayMode}" Content="Day" Command="{Binding SetDayCommand}" />
+              <Button Classes="command" Classes.active="{Binding IsWorkWeekMode}" Content="Work week" Command="{Binding SetWorkWeekCommand}" />
+              <Button Classes="command" Classes.active="{Binding IsWeekMode}" Content="Week" Command="{Binding SetWeekCommand}" />
+              <Button Classes="command" Classes.active="{Binding IsMonthMode}" Content="Month" Command="{Binding SetMonthCommand}" />
+              <Rectangle Width="1" Height="20" Fill="{DynamicResource DividerBrush}" Margin="8,0" />
+              <Button Classes="command" Command="{Binding OpenSelectedCommand}" ToolTip.Tip="Enter">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <PathIcon Data="{StaticResource Icon.Edit}" />
+                  <TextBlock Text="Open" />
+                </StackPanel>
+              </Button>
+              <Button Classes="command" Command="{Binding DeleteSelectedCommand}" ToolTip.Tip="Delete">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <PathIcon Data="{StaticResource Icon.Delete}" />
+                  <TextBlock Text="Delete" />
+                </StackPanel>
+              </Button>
+            </StackPanel>
+          </Panel>
+
+          <!-- Mail commands -->
+          <StackPanel Orientation="Horizontal" Spacing="2" IsVisible="{Binding IsMailActive}">
+            <Button Classes="primary" Command="{Binding NewMailCommand}" ToolTip.Tip="Ctrl+N">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <PathIcon Data="{StaticResource Icon.Compose}" Foreground="White" />
+                <TextBlock Text="New mail" />
+              </StackPanel>
+            </Button>
+            <Rectangle Width="1" Height="20" Fill="{DynamicResource DividerBrush}" Margin="8,0" />
+            <Button Classes="command" Command="{Binding DeleteCommand}" ToolTip.Tip="Delete">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <PathIcon Data="{StaticResource Icon.Delete}" />
+                <TextBlock Text="Delete" />
+              </StackPanel>
+            </Button>
+            <Button Classes="command" Command="{Binding ArchiveCommand}" ToolTip.Tip="Backspace">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <PathIcon Data="{StaticResource Icon.Archive}" />
+                <TextBlock Text="Archive" />
+              </StackPanel>
+            </Button>
+            <Button Classes="command" x:Name="MoveButton" Click="OnMoveButtonClick" IsEnabled="{Binding HasSelection}">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <PathIcon Data="{StaticResource Icon.FolderArrowRight}" />
+                <TextBlock Text="Move to" />
+                <PathIcon Classes="small" Data="{StaticResource Icon.ChevronDown}" />
+              </StackPanel>
+            </Button>
+            <Rectangle Width="1" Height="20" Fill="{DynamicResource DividerBrush}" Margin="8,0" />
+            <Button Classes="command" Command="{Binding ReplyCommand}" ToolTip.Tip="Ctrl+R">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <PathIcon Data="{StaticResource Icon.ArrowReply}" />
+                <TextBlock Text="Reply" />
+              </StackPanel>
+            </Button>
+            <Button Classes="command" Command="{Binding ReplyAllCommand}" ToolTip.Tip="Ctrl+Shift+R">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <PathIcon Data="{StaticResource Icon.ArrowReplyAll}" />
+                <TextBlock Text="Reply all" />
+              </StackPanel>
+            </Button>
+            <Button Classes="command" Command="{Binding ForwardCommand}" ToolTip.Tip="Ctrl+F">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <PathIcon Data="{StaticResource Icon.ArrowForward}" />
+                <TextBlock Text="Forward" />
+              </StackPanel>
+            </Button>
+            <Rectangle Width="1" Height="20" Fill="{DynamicResource DividerBrush}" Margin="8,0" />
+            <Button Classes="command" Command="{Binding ToggleReadCommand}" ToolTip.Tip="Ctrl+Q / Ctrl+U">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <PathIcon Data="{StaticResource Icon.MailRead}" />
+                <TextBlock Text="Read / Unread" />
+              </StackPanel>
+            </Button>
+            <Button Classes="command" Command="{Binding ToggleFlagCommand}" ToolTip.Tip="Insert">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <PathIcon Data="{StaticResource Icon.Flag}" />
+                <TextBlock Text="Flag" />
+              </StackPanel>
+            </Button>
+            <Button Classes="command" x:Name="CategorizeButton" Click="OnCategorizeButtonClick" IsEnabled="{Binding HasSelection}">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <PathIcon Data="{StaticResource Icon.Tag}" />
+                <TextBlock Text="Categorize" />
+                <PathIcon Classes="small" Data="{StaticResource Icon.ChevronDown}" />
+              </StackPanel>
+            </Button>
+            <Rectangle Width="1" Height="20" Fill="{DynamicResource DividerBrush}" Margin="8,0" />
+            <ToggleButton Classes="command" IsChecked="{Binding ShowAsConversations}" ToolTip.Tip="Show as conversations">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <PathIcon Data="{StaticResource Icon.ChatMultiple}" />
+                <TextBlock Text="Conversations" />
+              </StackPanel>
+            </ToggleButton>
+            <Button Classes="command" Command="{Binding SyncCommand}" ToolTip.Tip="F9">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <PathIcon Data="{StaticResource Icon.ArrowSync}" />
+                <TextBlock Text="Send / Receive" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
+        </Panel>
+      </Border>
+
+      <!-- Status bar -->
+      <Border DockPanel.Dock="Bottom" Background="{DynamicResource CommandBarBrush}"
+              BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,1,0,0" Padding="12,4">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsSyncing}" Width="80" MinWidth="0" VerticalAlignment="Center" />
+          <TextBlock Text="{Binding StatusText}" FontSize="12" Classes="muted" />
+        </StackPanel>
+      </Border>
+
+      <!-- Undo send: one bar per message still waiting out its delay -->
+      <ItemsControl DockPanel.Dock="Bottom" ItemsSource="{Binding PendingSends}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:PendingSendViewModel">
+            <Border Background="#323130" Padding="16,8">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="{Binding Text}" Foreground="White" VerticalAlignment="Center" />
+                <Button Grid.Column="1" Content="Undo" Foreground="#9CDCFE" Background="Transparent" BorderThickness="0"
+                        FontWeight="SemiBold"
+                        Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).UndoSendCommand}"
+                        CommandParameter="{Binding}" />
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <Grid ColumnDefinitions="52,240,Auto,400,Auto,*">
+
+        <!-- Navigation rail -->
+        <Border Background="{DynamicResource PaneBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,1,0">
+          <StackPanel Margin="0,8">
+            <Button Classes="rail" Classes.active="{Binding IsMailActive}" ToolTip.Tip="Mail (Ctrl+1)" Command="{Binding ShowMailCommand}">
+              <PathIcon Classes="large" Data="{StaticResource Icon.Mail}" />
+            </Button>
+            <Button Classes="rail" Classes.active="{Binding IsCalendarActive}" ToolTip.Tip="Calendar (Ctrl+2)" Command="{Binding ShowCalendarCommand}">
+              <PathIcon Classes="large" Data="{StaticResource Icon.CalendarLtr}" />
+            </Button>
+          </StackPanel>
+        </Border>
+
+        <!-- Folder pane (also a drop target for dragged messages) -->
+        <Border Grid.Column="1" Background="{DynamicResource PaneBrush}" BorderBrush="{DynamicResource DividerBrush}"
+                BorderThickness="0,0,1,0" IsVisible="{Binding IsMailActive}">
+          <DockPanel>
+            <TextBlock DockPanel.Dock="Top" Text="{Binding AccountEmail}" Margin="16,14,8,8" FontSize="13"
+                       FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding AccountEmail}" />
+            <ListBox x:Name="FolderList" Classes="pane" ItemsSource="{Binding Folders}" SelectedItem="{Binding SelectedFolder}"
+                     DragDrop.AllowDrop="True" Margin="4,0">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:FolderViewModel">
+                  <Grid ColumnDefinitions="Auto,*,Auto" Height="34" Margin="{Binding Indent}" Background="Transparent">
+                    <PathIcon Data="{Binding Icon}" Margin="0,0,10,0" />
+                    <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Column="2" Text="{Binding UnreadCount}" IsVisible="{Binding HasUnread}"
+                               Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                  </Grid>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </DockPanel>
+        </Border>
+
+        <GridSplitter Grid.Column="2" Classes="pane" ResizeDirection="Columns" IsVisible="{Binding IsMailActive}" />
+
+        <!-- Message list -->
+        <Border Grid.Column="3" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,1,0" IsVisible="{Binding IsMailActive}">
+          <DockPanel>
+            <TextBlock DockPanel.Dock="Top" Classes="paneTitle" Text="{Binding FolderTitle}" Margin="16,12,8,8" />
+            <TextBlock DockPanel.Dock="Top" Text="Double-click a draft to keep editing it." FontSize="12" Classes="muted"
+                       Margin="16,0,8,6" IsVisible="{Binding IsDraftsFolder}" />
+            <ListBox x:Name="MessageList" Classes="pane" ItemsSource="{Binding Messages}"
+                     SelectedItem="{Binding SelectedMessage}" SelectionMode="Multiple">
+              <ListBox.KeyBindings>
+                <KeyBinding Gesture="Enter" Command="{Binding OpenSelectedCommand}" />
+              </ListBox.KeyBindings>
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:MessageItemViewModel">
+                  <StackPanel>
+                    <TextBlock Text="{Binding GroupLabel}" IsVisible="{Binding ShowGroupHeader}"
+                               FontSize="12" FontWeight="SemiBold" Classes="muted" Margin="16,12,8,4" />
+                    <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1" Background="Transparent">
+                      <Grid ColumnDefinitions="3,*">
+                        <Rectangle Fill="{DynamicResource AccentBrush}" IsVisible="{Binding ShowUnreadBar}" />
+                        <Grid Grid.Column="1" RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" Margin="13,9,12,9">
+                          <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="{Binding Sender}" FontWeight="{Binding TitleWeight}" TextTrimming="CharacterEllipsis" MaxWidth="260" />
+                            <Border Classes="badge" IsVisible="{Binding ShowThreadCount}" ToolTip.Tip="Messages in this conversation">
+                              <TextBlock Text="{Binding ThreadCount}" FontSize="11" />
+                            </Border>
+                          </StackPanel>
+                          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <PathIcon Classes="small" Data="{StaticResource Icon.ArrowReply}" IsVisible="{Binding IsAnswered}"
+                                      Foreground="{DynamicResource MutedTextBrush}" ToolTip.Tip="Replied" />
+                            <PathIcon Classes="small" Data="{StaticResource Icon.ArrowForward}" IsVisible="{Binding IsForwarded}"
+                                      Foreground="{DynamicResource MutedTextBrush}" ToolTip.Tip="Forwarded" />
+                            <PathIcon Classes="small" Data="{StaticResource Icon.Calendar}" IsVisible="{Binding HasCalendar}"
+                                      Foreground="{DynamicResource MutedTextBrush}" ToolTip.Tip="Meeting invitation or reply" />
+                            <PathIcon Classes="small" Data="{StaticResource Icon.Attach}" IsVisible="{Binding HasAttachments}"
+                                      Foreground="{DynamicResource MutedTextBrush}" ToolTip.Tip="Attachment" />
+                            <PathIcon Classes="small" Data="{StaticResource Icon.Flag}" IsVisible="{Binding IsFlagged}"
+                                      Foreground="{DynamicResource FlagBrush}" ToolTip.Tip="Flagged" />
+                          </StackPanel>
+                          <TextBlock Grid.Row="1" Text="{Binding Subject}" FontWeight="{Binding TitleWeight}" TextTrimming="CharacterEllipsis"
+                                     Margin="0,1,0,1" />
+                          <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ShortDate}" FontSize="12" Classes="muted"
+                                     Margin="8,0,0,0" VerticalAlignment="Center" />
+                          <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Text="{Binding Preview}" FontSize="12"
+                                     Classes="muted" TextTrimming="CharacterEllipsis" />
+                          <!-- Categories, and the folder for search results -->
+                          <StackPanel Grid.Row="3" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="6" Margin="0,5,0,0"
+                                      IsVisible="{Binding HasCategories}">
+                            <ItemsControl ItemsSource="{Binding Categories}">
+                              <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                  <StackPanel Orientation="Horizontal" Spacing="4" />
+                                </ItemsPanelTemplate>
+                              </ItemsControl.ItemsPanel>
+                              <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:CategoryChip">
+                                  <Border Background="{Binding Brush}" CornerRadius="3" Padding="6,1" ToolTip.Tip="{Binding Name}">
+                                    <TextBlock Text="{Binding Name}" FontSize="10" Foreground="White" />
+                                  </Border>
+                                </DataTemplate>
+                              </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                          </StackPanel>
+                          <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding FolderName}" IsVisible="{Binding ShowFolderName}"
+                                     FontSize="11" Classes="muted" Margin="8,5,0,0" />
+                        </Grid>
+                      </Grid>
+                    </Border>
+                  </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </DockPanel>
+        </Border>
+
+        <GridSplitter Grid.Column="4" Classes="pane" ResizeDirection="Columns" IsVisible="{Binding IsMailActive}" />
+
+        <!-- Calendar module, in place of the mail panes -->
+        <Panel Grid.Column="1" Grid.ColumnSpan="5" IsVisible="{Binding IsCalendarActive}">
+          <views:CalendarView DataContext="{Binding Calendar}" />
+        </Panel>
+
+        <!-- Reading pane -->
+        <Panel Grid.Column="5" IsVisible="{Binding IsMailActive}">
+          <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10" IsVisible="{Binding !HasSelection}">
+            <PathIcon Data="{StaticResource Icon.MailRead}" Width="56" Height="56" Foreground="{DynamicResource DividerBrush}"
+                      HorizontalAlignment="Center" />
+            <TextBlock Text="Select an item to read" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" />
+            <TextBlock Text="Nothing is selected" Classes="muted" HorizontalAlignment="Center" />
+          </StackPanel>
+
+          <DockPanel IsVisible="{Binding HasSelection}" Margin="24,16">
+            <StackPanel DockPanel.Dock="Top" Spacing="8">
+              <TextBlock Text="{Binding SelectedMessage.Subject}" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap" />
+              <ItemsControl ItemsSource="{Binding SelectedMessage.Categories}" IsVisible="{Binding SelectedMessage.HasCategories}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <WrapPanel />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:CategoryChip">
+                    <Border Background="{Binding Brush}" CornerRadius="3" Padding="8,2" Margin="0,0,6,0">
+                      <TextBlock Text="{Binding Name}" FontSize="12" Foreground="White" />
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+
+            <!-- One message -->
+            <Panel IsVisible="{Binding IsSingleMessageOpen}">
+              <DockPanel DataContext="{Binding ReadingBody}" x:DataType="vm:MessageBodyViewModel" Margin="0,12,0,0">
+                <StackPanel DockPanel.Dock="Top" Spacing="12">
+                  <Grid ColumnDefinitions="Auto,*,Auto"
+                        DataContext="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).SelectedMessage}"
+                        x:DataType="vm:MessageItemViewModel">
+                    <Border Width="40" Height="40" CornerRadius="20" Background="{DynamicResource AccentBrush}" VerticalAlignment="Top">
+                      <TextBlock Text="{Binding Initials}" Foreground="White" FontWeight="SemiBold"
+                                 HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel Grid.Column="1" Margin="12,0" Spacing="2">
+                      <SelectableTextBlock Text="{Binding FromLine}" FontWeight="SemiBold" />
+                      <SelectableTextBlock Text="{Binding To, StringFormat='To: {0}'}" FontSize="12"
+                                           Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                      <SelectableTextBlock Text="{Binding Cc, StringFormat='Cc: {0}'}" FontSize="12"
+                                           Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap"
+                                           IsVisible="{Binding HasCc}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Spacing="6" HorizontalAlignment="Right">
+                      <StackPanel Orientation="Horizontal" Spacing="2" HorizontalAlignment="Right">
+                        <Button Classes="command" ToolTip.Tip="Reply (Ctrl+R)"
+                                Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ReplyCommand}">
+                          <PathIcon Data="{StaticResource Icon.ArrowReply}" />
+                        </Button>
+                        <Button Classes="command" ToolTip.Tip="Reply all (Ctrl+Shift+R)"
+                                Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ReplyAllCommand}">
+                          <PathIcon Data="{StaticResource Icon.ArrowReplyAll}" />
+                        </Button>
+                        <Button Classes="command" ToolTip.Tip="Forward (Ctrl+F)"
+                                Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ForwardCommand}">
+                          <PathIcon Data="{StaticResource Icon.ArrowForward}" />
+                        </Button>
+                      </StackPanel>
+                      <TextBlock Text="{Binding FullDate}" FontSize="12" Classes="muted" HorizontalAlignment="Right" />
+                    </StackPanel>
+                  </Grid>
+
+                  <views:MessageBodyExtras />
+                  <Border Height="1" Background="{DynamicResource DividerBrush}" />
+                </StackPanel>
+                <Panel>
+                  <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" VerticalAlignment="Top" />
+                  <!-- HTML mail is designed for a white page; plain text takes the theme (Border.mailBody styles). -->
+                  <Border Classes="mailBody" Classes.plain="{Binding IsPlainText}" Margin="0,8,0,0" Padding="8">
+                    <controls:MailHtmlPanel x:Name="BodyView" Text="{Binding Html}"
+                                            AllowRemoteContent="{Binding AllowRemoteContent}"
+                                            InlineImageResolver="{Binding InlineImageResolver}"
+                                            Background="Transparent" />
+                  </Border>
+                </Panel>
+              </DockPanel>
+            </Panel>
+
+            <!-- A conversation: every message, newest first; click a header to expand or collapse it -->
+            <ScrollViewer IsVisible="{Binding IsConversationOpen}" Margin="0,12,0,0">
+              <ItemsControl ItemsSource="{Binding ConversationCards}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ConversationCardViewModel">
+                    <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" CornerRadius="6" Margin="0,0,0,10">
+                      <StackPanel>
+                        <Button Command="{Binding ToggleCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                Classes="command" Padding="12,10" Margin="0" CornerRadius="6">
+                          <Grid ColumnDefinitions="Auto,*,Auto">
+                            <Border Width="32" Height="32" CornerRadius="16" Background="{DynamicResource AccentBrush}" VerticalAlignment="Top">
+                              <TextBlock Text="{Binding Initials}" Foreground="White" FontSize="12" FontWeight="SemiBold"
+                                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <StackPanel Grid.Column="1" Margin="10,0" Spacing="2">
+                              <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="{Binding Sender}" FontWeight="SemiBold" />
+                                <Border Classes="badge" IsVisible="{Binding HasFolderLabel}">
+                                  <TextBlock Text="{Binding FolderLabel}" FontSize="11" Classes="muted" />
+                                </Border>
+                              </StackPanel>
+                              <TextBlock Text="{Binding Preview}" FontSize="12" Classes="muted" TextTrimming="CharacterEllipsis"
+                                         IsVisible="{Binding IsCollapsed}" />
+                              <TextBlock Text="{Binding To, StringFormat='To: {0}'}" FontSize="12" Classes="muted" TextWrapping="Wrap"
+                                         IsVisible="{Binding IsExpanded}" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="2" Text="{Binding Date}" FontSize="12" Classes="muted" />
+                          </Grid>
+                        </Button>
+                        <StackPanel IsVisible="{Binding IsExpanded}" Margin="12,0,12,12" Spacing="8">
+                          <views:MessageBodyExtras DataContext="{Binding Body}" />
+                          <ProgressBar IsIndeterminate="True" IsVisible="{Binding Body.IsLoading}" />
+                          <!-- Padding goes on the border: HtmlLabel offsets its text by its own Padding and clips the first letters. -->
+                          <Border Classes="mailBody" Classes.plain="{Binding Body.IsPlainText}" Padding="8">
+                            <controls:MailHtmlLabel Text="{Binding Body.Html}"
+                                                    AllowRemoteContent="{Binding Body.AllowRemoteContent}"
+                                                    InlineImageResolver="{Binding Body.InlineImageResolver}"
+                                                    Background="Transparent" />
+                          </Border>
+                        </StackPanel>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </DockPanel>
+        </Panel>
+      </Grid>
+    </DockPanel>
+
+    <!-- First-run account setup -->
+    <Border IsVisible="{Binding IsAccountSetupVisible}" Background="#99000000">
+      <views:AccountSetupView DataContext="{Binding AccountSetup}" IsVisible="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).AccountSetup, Converter={x:Static ObjectConverters.IsNotNull}}" />
+    </Border>
+  </Panel>
+
+</Window>

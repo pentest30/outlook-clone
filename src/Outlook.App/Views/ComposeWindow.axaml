@@ -1,0 +1,120 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Outlook.App.ViewModels"
+        xmlns:controls="using:Outlook.App.Controls"
+        x:Class="Outlook.App.Views.ComposeWindow"
+        x:DataType="vm:ComposeViewModel"
+        Title="{Binding Title}"
+        Width="860" Height="720" MinWidth="560" MinHeight="420"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource SurfaceBrush}"
+        DragDrop.AllowDrop="True">
+
+  <!-- Outlook compose shortcuts: Ctrl+Enter / Alt+S send, Ctrl+S save draft. -->
+  <Window.KeyBindings>
+    <KeyBinding Gesture="Ctrl+Enter" Command="{Binding SendCommand}" />
+    <KeyBinding Gesture="Alt+S" Command="{Binding SendCommand}" />
+    <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveDraftCommand}" />
+  </Window.KeyBindings>
+
+  <DockPanel>
+    <!-- Toolbar -->
+    <Border DockPanel.Dock="Top" Background="{DynamicResource PaneBrush}"
+            BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1" Padding="8,6">
+      <StackPanel Orientation="Horizontal" Spacing="2">
+        <Button Classes="command" Click="OnAttachClick">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <PathIcon Data="{StaticResource Icon.Attach}" />
+            <TextBlock Text="Attach file" />
+          </StackPanel>
+        </Button>
+        <Button Classes="command" Command="{Binding SaveDraftCommand}" ToolTip.Tip="Ctrl+S">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <PathIcon Data="{StaticResource Icon.Drafts}" />
+            <TextBlock Text="Save draft" />
+          </StackPanel>
+        </Button>
+        <Button Classes="command" Command="{Binding DiscardCommand}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <PathIcon Data="{StaticResource Icon.Delete}" />
+            <TextBlock Text="Discard" />
+          </StackPanel>
+        </Button>
+        <Rectangle Width="1" Fill="{DynamicResource DividerBrush}" Margin="8,4" />
+        <ToggleButton Classes="command" Content="Bcc" IsChecked="{Binding ShowBcc}"
+                      Background="Transparent" BorderThickness="0" Padding="10,6" />
+      </StackPanel>
+    </Border>
+
+    <!-- Status bar -->
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource PaneBrush}"
+            BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,1,0,0" Padding="12,3">
+      <TextBlock Text="{Binding Status}" FontSize="12" Classes="muted" />
+    </Border>
+
+    <!-- Header fields, with Send on the left like classic Outlook -->
+    <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" Margin="16,12,16,4">
+      <Button Grid.RowSpan="4" Classes="primary" Width="72" Margin="0,0,12,0" VerticalAlignment="Stretch"
+              Command="{Binding SendCommand}" ToolTip.Tip="Ctrl+Enter">
+        <StackPanel Spacing="4" HorizontalAlignment="Center" VerticalAlignment="Center">
+          <PathIcon Data="{StaticResource Icon.Send}" Width="22" Height="22" HorizontalAlignment="Center" Foreground="White" />
+          <TextBlock Text="Send" HorizontalAlignment="Center" Foreground="White" />
+        </StackPanel>
+      </Button>
+
+      <TextBlock Grid.Column="1" Text="From" VerticalAlignment="Center" Margin="0,0,12,0" Classes="muted" />
+      <TextBlock Grid.Column="2" Text="{Binding From}" VerticalAlignment="Center" Margin="0,6" />
+
+      <TextBlock Grid.Row="1" Grid.Column="1" Text="To" VerticalAlignment="Center" Margin="0,0,12,0" Classes="muted" />
+      <AutoCompleteBox Grid.Row="1" Grid.Column="2" x:Name="ToBox" Text="{Binding To, Mode=TwoWay}" Margin="0,2"
+                       Watermark="Separate addresses with ; or ,"
+                       FilterMode="None" MinimumPrefixLength="1" MinimumPopulateDelay="0:0:0.15"
+                       AsyncPopulator="{Binding SuggestRecipients}" TextSelector="{x:Static controls:RecipientCompletion.Selector}" />
+
+      <TextBlock Grid.Row="2" Grid.Column="1" Text="Cc" VerticalAlignment="Center" Margin="0,0,12,0" Classes="muted" />
+      <AutoCompleteBox Grid.Row="2" Grid.Column="2" Text="{Binding Cc, Mode=TwoWay}" Margin="0,2"
+                       FilterMode="None" MinimumPrefixLength="1" MinimumPopulateDelay="0:0:0.15"
+                       AsyncPopulator="{Binding SuggestRecipients}" TextSelector="{x:Static controls:RecipientCompletion.Selector}" />
+
+      <TextBlock Grid.Row="3" Grid.Column="1" Text="Bcc" VerticalAlignment="Center" Margin="0,0,12,0" Classes="muted"
+                 IsVisible="{Binding ShowBcc}" />
+      <AutoCompleteBox Grid.Row="3" Grid.Column="2" Text="{Binding Bcc, Mode=TwoWay}" Margin="0,2" IsVisible="{Binding ShowBcc}"
+                       FilterMode="None" MinimumPrefixLength="1" MinimumPopulateDelay="0:0:0.15"
+                       AsyncPopulator="{Binding SuggestRecipients}" TextSelector="{x:Static controls:RecipientCompletion.Selector}" />
+
+      <TextBlock Grid.Row="4" Grid.Column="1" Text="Subject" VerticalAlignment="Center" Margin="0,0,12,0" Classes="muted" />
+      <TextBox Grid.Row="4" Grid.Column="2" Text="{Binding Subject}" Margin="0,2" />
+    </Grid>
+
+    <!-- Attachments -->
+    <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding Attachments}" Margin="100,4,16,0">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <WrapPanel />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:AttachmentViewModel">
+          <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" CornerRadius="4"
+                  Padding="8,4" Margin="0,0,8,6">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Classes="small" Data="{StaticResource Icon.Attach}" VerticalAlignment="Center" />
+              <TextBlock Text="{Binding FileName}" VerticalAlignment="Center" MaxWidth="220" TextTrimming="CharacterEllipsis" />
+              <TextBlock Text="{Binding SizeText}" FontSize="11" Classes="muted" VerticalAlignment="Center" />
+              <Button Classes="command" Padding="4" Margin="0"
+                      Command="{Binding $parent[Window].((vm:ComposeViewModel)DataContext).RemoveAttachmentCommand}"
+                      CommandParameter="{Binding}" ToolTip.Tip="Remove attachment">
+                <PathIcon Width="10" Height="10" Data="{StaticResource Icon.Dismiss}" />
+              </Button>
+            </StackPanel>
+          </Border>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+
+    <!-- Body -->
+    <TextBox x:Name="BodyBox" Text="{Binding Body}" AcceptsReturn="True" AcceptsTab="True" TextWrapping="Wrap"
+             Margin="16,8,16,12" Padding="10" FontSize="14"
+             ScrollViewer.VerticalScrollBarVisibility="Auto" />
+  </DockPanel>
+</Window>

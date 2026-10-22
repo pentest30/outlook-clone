@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Outlook.App/Outlook.App.csproj" />
+    <Project Path="src/Outlook.Calendar/Outlook.Calendar.csproj" />
+    <Project Path="src/Outlook.Core/Outlook.Core.csproj" />
+    <Project Path="src/Outlook.Data/Outlook.Data.csproj" />
+    <Project Path="src/Outlook.Mail/Outlook.Mail.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Outlook.App.Tests/Outlook.App.Tests.csproj" />
+    <Project Path="tests/Outlook.Tests/Outlook.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/Outlook.DevSeed/Outlook.DevSeed.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,38 @@
+using Outlook.Core.Models;
+
+namespace Outlook.App.ViewModels;
+
+/// <summary>An attachment chip, in the reading pane (cached attachment) or the compose window (file to send).</summary>
+public class AttachmentViewModel
+{
+    public AttachmentViewModel(MailAttachment attachment, Func<Task<byte[]>>? loadData = null)
+    {
+        Attachment = attachment;
+        LoadData = loadData;
+        FileName = attachment.FileName;
+        Size = attachment.Size;
+    }
+
+    public AttachmentViewModel(OutgoingAttachment outgoing)
+    {
+        Outgoing = outgoing;
+        FileName = outgoing.FileName;
+        Size = outgoing.Data.LongLength;
+    }
+
+    public MailAttachment? Attachment { get; }
+    /// <summary>Reads a cached attachment's bytes, for Open and Save as.</summary>
+    public Func<Task<byte[]>>? LoadData { get; }
+    public OutgoingAttachment? Outgoing { get; }
+    public string FileName { get; }
+    public long Size { get; }
+
+    public string SizeText => FormatSize(Size);
+
+    public static string FormatSize(long bytes) => bytes switch
+    {
+        < 1024 => $"{bytes} B",
+        < 1024 * 1024 => $"{bytes / 1024.0:0.#} KB",
+        _ => $"{bytes / (1024.0 * 1024):0.#} MB",
+    };
+}
