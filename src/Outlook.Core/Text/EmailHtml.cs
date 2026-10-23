@@ -32,6 +32,8 @@ public static partial class EmailHtml
         s = EmptyImages().Replace(s, "");
         s = FreeTextCellHeights(s);
         s = BackgroundShorthand().Replace(s, SpellOutBackgroundColor);
+        // HtmlRenderer draws "square" bullets as ♠ (U+2660); round ones read the same and render right.
+        s = SquareBullets().Replace(s, "${1}disc");
         return s;
     }
 
@@ -118,6 +120,9 @@ public static partial class EmailHtml
     [GeneratedRegex(@"(?<![-\w])background\s*:\s*([^;""'}<>]*)", RegexOptions.IgnoreCase)]
     private static partial Regex BackgroundShorthand();
 
+    [GeneratedRegex(@"(list-style(?:-type)?\s*:[^;""'}<>]*?)\bsquare\b", RegexOptions.IgnoreCase)]
+    private static partial Regex SquareBullets();
+
     [GeneratedRegex(@"#[0-9a-f]{3,8}\b|rgba?\([^)]*\)", RegexOptions.IgnoreCase)]
     private static partial Regex BackgroundColorToken();
 
@@ -130,6 +135,28 @@ public static partial class EmailHtml
 
     [GeneratedRegex(@"\b(https?://|mailto:)[^\s<>""']+[^\s<>""'.,;:!?)]", RegexOptions.IgnoreCase)]
     private static partial Regex Urls();
+
+    /// <summary>
+    /// The body as shown while pictures are blocked: each picture from the web gives way to its alt text,
+    /// as in Outlook. Left in, the renderer would draw a broken-image box at the picture's full size.
+    /// </summary>
+    public static string WithoutRemoteImages(string html) =>
+        ImageTags().Replace(html, m =>
+        {
+            if (!IsRemote(ImageSource().Match(m.Value) is { Success: true } src ? src.Groups[2].Value.Trim() : null))
+                return m.Value;
+            var alt = ImageAlt().Match(m.Value) is { Success: true } a ? a.Groups[2].Value.Trim() : "";
+            return alt.Length == 0 ? "" : $"<span style=\"color: #616161\">{alt}</span>";
+        });
+
+    [GeneratedRegex(@"<img\b[^>]*>", RegexOptions.IgnoreCase)]
+    private static partial Regex ImageTags();
+
+    [GeneratedRegex(@"\bsrc\s*=\s*(""|')(.*?)\1", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
+    private static partial Regex ImageSource();
+
+    [GeneratedRegex(@"\balt\s*=\s*(""|')(.*?)\1", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
+    private static partial Regex ImageAlt();
 
     /// <summary>True for references the reading pane must not fetch until the user allows it.</summary>
     public static bool IsRemote(string? src) =>
