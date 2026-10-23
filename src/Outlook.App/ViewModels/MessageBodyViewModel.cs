@@ -21,6 +21,9 @@ public partial class MessageBodyViewModel(IMailService mail, IMailStore store,
 
     [ObservableProperty] private string _html = "";
 
+    /// <summary>The body with its web pictures, shown once the user clicks Download pictures.</summary>
+    private string _fullHtml = "";
+
     /// <summary>The message has no HTML part: drawn in the theme's colours rather than on white.</summary>
     [ObservableProperty] private bool _isPlainText;
     [ObservableProperty] private bool _isLoading;
@@ -59,9 +62,10 @@ public partial class MessageBodyViewModel(IMailService mail, IMailStore store,
 
             var prepared = EmailHtml.Prepare(full.BodyHtml, full.BodyText);
             IsPlainText = string.IsNullOrWhiteSpace(full.BodyHtml);
+            _fullHtml = prepared.Html;
             AllowRemoteContent = false;
             HasBlockedContent = prepared.HasRemoteContent;
-            Html = prepared.Html;
+            Html = prepared.HasRemoteContent ? EmailHtml.WithoutRemoteImages(prepared.Html) : prepared.Html;
             Full = full;
 
             Invitation = full.CalendarIcs is { } ics && invitationFor is not null ? await invitationFor(ics) : null;
@@ -85,6 +89,7 @@ public partial class MessageBodyViewModel(IMailService mail, IMailStore store,
     {
         Full = null;
         Html = "";
+        _fullHtml = "";
         IsPlainText = false;
         Attachments.Clear();
         HasAttachments = false;
@@ -98,6 +103,7 @@ public partial class MessageBodyViewModel(IMailService mail, IMailStore store,
     private void DownloadPictures()
     {
         AllowRemoteContent = true;
+        Html = _fullHtml;
         HasBlockedContent = false;
     }
 }

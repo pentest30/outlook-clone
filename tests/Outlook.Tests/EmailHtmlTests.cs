@@ -48,6 +48,26 @@ public class EmailHtmlTests
     }
 
     [Theory]
+    [InlineData("<ul style=\"line-height: 1.4; list-style-type: square; padding-left: 15px\">",
+                "<ul style=\"line-height: 1.4; list-style-type: disc; padding-left: 15px\">")]
+    [InlineData("<style>ul { list-style: square inside; }</style>", "<style>ul { list-style: disc inside; }</style>")]
+    [InlineData("<p class=\"square\">square</p>", "<p class=\"square\">square</p>")]
+    public void Square_bullets_become_round(string html, string expected)
+    {
+        Assert.Equal(expected, EmailHtml.Sanitize(html));
+    }
+
+    [Fact]
+    public void Blocked_web_pictures_give_way_to_their_alt_text()
+    {
+        var html = "<p><img src=\"https://x.test/logo.png\" alt=\"Render\" style=\"width: 100%; height: auto\"></p>" +
+                   "<img src='https://track.test/open?m=1' width=1 height=1>" +
+                   "<img src=\"cid:inline@x\" alt=\"inline\">";
+        Assert.Equal("<p><span style=\"color: #616161\">Render</span></p><img src=\"cid:inline@x\" alt=\"inline\">",
+            EmailHtml.WithoutRemoteImages(html));
+    }
+
+    [Theory]
     [InlineData("<img src=\"https://track.example/p.gif\">", true)]
     [InlineData("<div style=\"background: url('http://x/y.png')\">", true)]
     [InlineData("<link rel=stylesheet href=https://x/s.css>", true)]

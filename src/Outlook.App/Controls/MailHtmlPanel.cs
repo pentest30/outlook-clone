@@ -149,8 +149,9 @@ public static class MailContent
         }
         else if (EmailHtml.IsRemote(src) && !allowRemote)
         {
+            // Background pictures still come here; an empty picture rather than the renderer's red-cross box.
             args.Handled = true;
-            args.Callback();
+            args.Callback(Blank.Value);
         }
     }
 
@@ -159,6 +160,10 @@ public static class MailContent
         if (EmailHtml.IsRemote(args.Src) && !allowRemote)
             args.SetStyleSheet = "";
     }
+
+    private static readonly Lazy<Bitmap> Blank = new(() =>
+        new WriteableBitmap(new Avalonia.PixelSize(1, 1), new Avalonia.Vector(96, 96), Avalonia.Platform.PixelFormat.Bgra8888,
+            Avalonia.Platform.AlphaFormat.Premul));
 
     /// <summary>Pictures are resolved during layout, so re-render once the rules change.</summary>
     internal static void Rerender(HtmlControl control)
