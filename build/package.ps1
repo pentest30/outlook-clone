@@ -2,6 +2,7 @@
 #
 #   pwsh build/package.ps1                 # version from src/Outlook.App/Outlook.App.csproj
 #   pwsh build/package.ps1 -Version 0.6.0
+#   pwsh build/package.ps1 -AzureSigningMetadata metadata.json   # signed (see docs/SIGNING.md)
 #
 # The installer is per-user (no admin rights), adds Start menu and desktop shortcuts and an
 # uninstaller. The pack id is deliberately not "OutlookClone": Velopack installs to
@@ -9,7 +10,11 @@
 # where the app keeps the mail cache and saved passwords.
 param(
     [string]$Version,
-    [string]$Runtime = "win-x64"
+    [string]$Runtime = "win-x64",
+    # Azure Trusted Signing: { "Endpoint", "CodeSigningAccountName", "CertificateProfileName" }.
+    # Signs the app's files and the installer; credentials come from the environment
+    # (AZURE_TENANT_ID / AZURE_CLIENT_ID / AZURE_CLIENT_SECRET) or an Azure CLI login.
+    [string]$AzureSigningMetadata
 )
 $ErrorActionPreference = "Stop"
 $root = Split-Path $PSScriptRoot -Parent
@@ -33,7 +38,16 @@ Write-Host "Packing installer..."
 Push-Location $root
 try {
     dotnet tool restore | Out-Null
-    dotnet vpk pack `
+    $sign = @()
+    if ($AzureSigningMetadata) {
+        if (-not (Test-Path $AzureSigningMetadata)) { throw "Signing metadata not found: $AzureSigningMetadata" }
+        Write-Host "Signing with Azure Trusted Signing"
+        $sign = @("--azureTrustedSignFile", (Resolve-Path $AzureSigningMetadata).Path)
+    }
+    else {
+        Write-Warning "Not signed: browsers and SmartScreen will warn about the installer."
+    }
+    dotnet vpk pack @sign `
         --packId OutlookClone.Desktop `
         --packVersion $Version `
         --packTitle "Outlook Clone" `
