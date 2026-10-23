@@ -64,6 +64,9 @@ dotnet test                                   # unit and headless UI tests
 pwsh build/package.ps1                        # Windows installer in releases/
 ```
 
+The installer is signed with Azure Trusted Signing when the build has the credentials; see
+[docs/SIGNING.md](docs/SIGNING.md).
+
 ### Development mail server
 
 [GreenMail](https://greenmail-mail-test.github.io/greenmail/) in Docker accepts any login, so you can try

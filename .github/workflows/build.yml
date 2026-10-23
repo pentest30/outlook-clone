@@ -97,9 +97,42 @@ jobs:
             $version = "$base-ci.${{ github.run_number }}"
           }
           "version=$version" >> $env:GITHUB_OUTPUT
+      # Signed with Azure Trusted Signing when the repository has the secrets (docs/SIGNING.md);
+      # unsigned otherwise, with a warning.
       - name: Package
         shell: pwsh
-        run: ./build/package.ps1 -Version ${{ steps.version.outputs.version }}
+        env:
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          SIGNING_ENDPOINT: ${{ secrets.AZURE_SIGNING_ENDPOINT }}
+          SIGNING_ACCOUNT: ${{ secrets.AZURE_SIGNING_ACCOUNT }}
+          SIGNING_PROFILE: ${{ secrets.AZURE_SIGNING_PROFILE }}
+        run: |
+          $signing = @{}
+          if ($env:AZURE_CLIENT_SECRET -and $env:SIGNING_ENDPOINT -and $env:SIGNING_ACCOUNT -and $env:SIGNING_PROFILE) {
+            $metadata = Join-Path $env:RUNNER_TEMP "signing-metadata.json"
+            @{
+              Endpoint = $env:SIGNING_ENDPOINT
+              CodeSigningAccountName = $env:SIGNING_ACCOUNT
+              CertificateProfileName = $env:SIGNING_PROFILE
+            } | ConvertTo-Json | Set-Content $metadata
+            $signing.AzureSigningMetadata = $metadata
+            "SIGNED=true" >> $env:GITHUB_ENV
+          }
+          else {
+            Write-Output "::warning::Installer not signed: add the Azure Trusted Signing secrets (docs/SIGNING.md)."
+          }
+          ./build/package.ps1 -Version ${{ steps.version.outputs.version }} @signing
+      - name: Check signature
+        if: env.SIGNED == 'true'
+        shell: pwsh
+        run: |
+          foreach ($file in Get-ChildItem releases/*Setup.exe) {
+            $sig = Get-AuthenticodeSignature $file
+            Write-Output "$($file.Name): $($sig.Status) — $($sig.SignerCertificate.Subject)"
+            if ($sig.Status -ne "Valid") { throw "$($file.Name) is not validly signed" }
+          }
       - uses: actions/upload-artifact@v4
         with:
           name: OutlookClone-${{ steps.version.outputs.version }}-installer
