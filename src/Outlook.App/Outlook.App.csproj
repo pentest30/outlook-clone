@@ -2,7 +2,7 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <AssemblyName>OutlookClone</AssemblyName>
-    <Version>0.5.1</Version>
+    <Version>0.6.1</Version>
     <Product>Outlook Clone</Product>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     <ApplicationManifest>app.manifest</ApplicationManifest>

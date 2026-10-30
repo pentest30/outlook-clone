@@ -31,6 +31,7 @@ public static partial class EmailHtml
         // <img src=""> is a sender bug; browsers draw nothing, but the renderer would draw a broken-image box.
         s = EmptyImages().Replace(s, "");
         s = FreeTextCellHeights(s);
+        s = StyleAttributes().Replace(s, BlockFullWidthColumns);
         s = BackgroundShorthand().Replace(s, SpellOutBackgroundColor);
         // HtmlRenderer draws "square" bullets as ♠ (U+2660); round ones read the same and render right.
         s = SquareBullets().Replace(s, "${1}disc");
@@ -50,6 +51,14 @@ public static partial class EmailHtml
         // A lone colour name, e.g. "background: white".
         return NamedColor().IsMatch(value) ? $"{m.Value}; background-color: {value}" : m.Value;
     }
+
+    /// <summary>
+    /// Mail built with MJML (Anthropic, many newsletters) makes every column display:inline-block at width:100%.
+    /// HtmlRenderer cannot lay those out and the whole body came out blank. A full-width inline-block fills its
+    /// line on its own, so it is drawn as the block it already looks like; narrower ones (buttons) are left alone.
+    /// </summary>
+    private static string BlockFullWidthColumns(Match m) =>
+        FullWidth().IsMatch(m.Value) ? InlineBlock().Replace(m.Value, "display:block") : m.Value;
 
     /// <summary>
     /// A table cell's height is a minimum in browsers, but HtmlRenderer makes it the row's exact height and
@@ -115,6 +124,16 @@ public static partial class EmailHtml
 
     [GeneratedRegex(@"\s+height\s*=\s*(""[^""]*""|'[^']*'|[^\s>]+)", RegexOptions.IgnoreCase)]
     private static partial Regex HeightAttribute();
+
+    [GeneratedRegex(@"\bstyle\s*=\s*(""[^""]*""|'[^']*')", RegexOptions.IgnoreCase)]
+    private static partial Regex StyleAttributes();
+
+    [GeneratedRegex(@"(?<![-\w])display\s*:\s*inline-block\b", RegexOptions.IgnoreCase)]
+    private static partial Regex InlineBlock();
+
+    // width: 100%, but not max-width or min-width.
+    [GeneratedRegex(@"(?<![-\w])width\s*:\s*100%", RegexOptions.IgnoreCase)]
+    private static partial Regex FullWidth();
 
     // background: in a style attribute or <style> block, but not background-color, -image and so on.
     [GeneratedRegex(@"(?<![-\w])background\s*:\s*([^;""'}<>]*)", RegexOptions.IgnoreCase)]
