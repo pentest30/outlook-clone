@@ -48,6 +48,17 @@ public class EmailHtmlTests
     }
 
     [Theory]
+    [InlineData("<div class=\"mj-column-per-100\" style=\"font-size:0px;display:inline-block;vertical-align:top;width:100%;\">",
+                "<div class=\"mj-column-per-100\" style=\"font-size:0px;display:block;vertical-align:top;width:100%;\">")]
+    [InlineData("<div style='width: 100%; display: inline-block'>", "<div style='width: 100%; display:block'>")]
+    [InlineData("<a style=\"display: inline-block; padding: 14px 36px;\">Sign in</a>", "<a style=\"display: inline-block; padding: 14px 36px;\">Sign in</a>")]
+    [InlineData("<div style=\"display:inline-block;max-width:100%\">", "<div style=\"display:inline-block;max-width:100%\">")]
+    public void Full_width_inline_block_columns_become_blocks(string html, string expected)
+    {
+        Assert.Equal(expected, EmailHtml.Sanitize(html));
+    }
+
+    [Theory]
     [InlineData("<ul style=\"line-height: 1.4; list-style-type: square; padding-left: 15px\">",
                 "<ul style=\"line-height: 1.4; list-style-type: disc; padding-left: 15px\">")]
     [InlineData("<style>ul { list-style: square inside; }</style>", "<style>ul { list-style: disc inside; }</style>")]
